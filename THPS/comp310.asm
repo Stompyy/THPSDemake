@@ -51,7 +51,7 @@ ANIM_OFFSET_BSFLIP      = ANIM_OFFSET_KICKFLIP  + TOTAL_ANIM_TILES_KICKFLIP
 ANIM_OFFSET_TREFLIP     = ANIM_OFFSET_BSFLIP    + TOTAL_ANIM_TILES_BSFLIP
 ANIM_OFFSET_POPSHUV     = ANIM_OFFSET_TREFLIP   + TOTAL_ANIM_TILES_TREFLIP
 
-SCREEN_BOTTOM_Y             = 204   ; 240 PAL
+SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 
@@ -66,8 +66,6 @@ current_animation_start_tile    .rs 1
 running_tile_count              .rs 1
 target_tile_count               .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
-;current_animation_step          .rs 1
-;number_of_animation_frames      .rs 1
 animation_frame_timer           .rs 1
 is_animating                    .rs 1
 
@@ -332,7 +330,6 @@ ReadController:
 
     ; Set up the BSFLIP animation
     LDA #1                          ; Set is_animating to true
-    CLC
     STA is_animating
     LDA #ANIM_OFFSET_BSFLIP         ; Set the starting point for the animation subroutine to look at
     STA current_animation_starting_anim_offset
@@ -357,7 +354,6 @@ ReadLeft_Done:
 
     ; Set up the KICKFLIP animation
     LDA #1
-    CLC
     STA is_animating
     LDA #ANIM_OFFSET_KICKFLIP
     STA current_animation_starting_anim_offset
@@ -381,7 +377,6 @@ ReadRight_Done:
 
     ; Set up the POPSHUV animation
     LDA #1
-    CLC
     STA is_animating
     LDA #ANIM_OFFSET_POPSHUV
     STA current_animation_starting_anim_offset
@@ -403,7 +398,6 @@ ReadUp_Done:
 
     ; Set up the TREFLIP animation
     LDA #1
-    CLC
     STA is_animating
     LDA #ANIM_OFFSET_TREFLIP
     STA current_animation_starting_anim_offset
@@ -425,7 +419,6 @@ ReadDown_Done:
     BNE ReadA_Done
     ; Set up the OLLIE animation
     LDA #1
-    CLC
     STA is_animating
     LDA #ANIM_OFFSET_OLLIE
     STA current_animation_starting_anim_offset
@@ -449,8 +442,8 @@ ReadA_Done:
 
 ;ReadControls_Done:
     LDA is_animating
-    AND 0
-    BNE .SkipAnimUpdate
+    AND #1
+    BEQ .SkipAnimUpdate
     JSR UpdateAnimation
 .SkipAnimUpdate
 
@@ -471,23 +464,17 @@ LoadNextPlayerSprite:
 ; Just change the tile data
     LDX current_animation_starting_anim_offset
     LDY #1   ; Offset of the tile in memory
-
 .LoadTile_Next:
     LDA animations, X ; load in the next tile from the .db
-    
     STA sprite_player, Y
-    
-    INX     ; Increment the running tile count for the anim
-
-    CPY #21 ; Check if it has just done the last tile 
+    INX             ; Increment the running tile count for the anim
+    CPY #21         ; Check if it has just done the last tile 
     BEQ .anim_frameComplete
-
-    INY     ; move to the next tile descriptor in the sprite
+    INY             ; move to the next tile descriptor in the sprite
     INY
     INY
     INY
     JMP .LoadTile_Next
-
 .anim_frameComplete
     CPX target_tile_count   ; Check if we've reached the end of the anim sequence
     BNE .skipReset
@@ -510,16 +497,13 @@ UpdateAnimation:
     LDA #0
     STA animation_frame_timer
     JMP .SkipIncrement
-
 .NoNewAnimNeeded:
-    CLC
     INX
     STX animation_frame_timer
 .SkipIncrement:
     RTS
 ;----------------------------------------
 UpdateGravity:
-
     LDA sprite_player + SPRITE_Y    ; Get the current vertical position of the first tile
     CLC
     ADC #24                         ; Y offset of three tiles to find the bottom.y of player
@@ -528,7 +512,6 @@ UpdateGravity:
     BCS UpdatePlayer_Grounded
 
     ; Update player sprite
-
     ; First update 16 bit player_downward _speed
     LDA player_downward_speed
     CLC
@@ -551,7 +534,6 @@ UpdateGravity:
     RTS
 
 UpdatePlayer_Grounded:    
-
     LDA #0                          ; set player_speed to 0
     STA player_downward_speed
     STA player_downward_speed+1
