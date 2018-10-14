@@ -30,15 +30,22 @@ BUTTON_RIGHT    = %00000001
 MOVEMENT_SPEED              = 1
 ANIM_FRAME_CHANGE_TIME      = 8
 
-TOTAL_ANIM_TILES_IDLE      = 6 * 1
-TOTAL_ANIM_TILES_PUSH      = 6 * 3
-TOTAL_ANIM_TILES_OLLIE     = 6 * 2
-TOTAL_ANIM_TILES_NOLLIE    = 6 * 2
-TOTAL_ANIM_TILES_INAIR     = 6 * 1
-TOTAL_ANIM_TILES_KICKFLIP  = 6 * 4
-TOTAL_ANIM_TILES_BSFLIP    = 6 * 8
-TOTAL_ANIM_TILES_TREFLIP   = 6 * 4
-TOTAL_ANIM_TILES_POPSHUV   = 6 * 4
+TOTAL_ANIM_TILES_IDLE       = 6 * 1
+TOTAL_ANIM_TILES_PUSH       = 6 * 3
+TOTAL_ANIM_TILES_OLLIE      = 6 * 2
+TOTAL_ANIM_TILES_NOLLIE     = 6 * 2
+TOTAL_ANIM_TILES_INAIR      = 6 * 1
+TOTAL_ANIM_TILES_KICKFLIP   = 6 * 4
+TOTAL_ANIM_TILES_BSFLIP     = 6 * 8
+TOTAL_ANIM_TILES_TREFLIP    = 6 * 4
+TOTAL_ANIM_TILES_POPSHUV    = 6 * 4
+TOTAL_ANIM_TILES_BS180      = 6 * 5
+TOTAL_ANIM_TILES_FALL       = 6 * 4
+TOTAL_ANIM_TILES_5050       = 6 * 1
+TOTAL_ANIM_TILES_50         = 6 * 1
+TOTAL_ANIM_TILES_CROOKED    = 6 * 1
+TOTAL_ANIM_TILES_NOSEGRIND  = 6 * 1
+TOTAL_ANIM_TILES_BLUNTSLIDE = 6 * 1
 
 ; Offset of tile information into the animations .db
 ANIM_OFFSET_IDLE        = 0
@@ -50,6 +57,16 @@ ANIM_OFFSET_KICKFLIP    = ANIM_OFFSET_INAIR     + TOTAL_ANIM_TILES_INAIR
 ANIM_OFFSET_BSFLIP      = ANIM_OFFSET_KICKFLIP  + TOTAL_ANIM_TILES_KICKFLIP
 ANIM_OFFSET_TREFLIP     = ANIM_OFFSET_BSFLIP    + TOTAL_ANIM_TILES_BSFLIP
 ANIM_OFFSET_POPSHUV     = ANIM_OFFSET_TREFLIP   + TOTAL_ANIM_TILES_TREFLIP
+ANIM_OFFSET_BS180       = ANIM_OFFSET_POPSHUV   + TOTAL_ANIM_TILES_POPSHUV
+ANIM_OFFSET_FALL        = ANIM_OFFSET_BS180     + TOTAL_ANIM_TILES_BS180
+ANIM_OFFSET_5050        = ANIM_OFFSET_FALL      + TOTAL_ANIM_TILES_FALL
+ANIM_OFFSET_50          = ANIM_OFFSET_5050      + TOTAL_ANIM_TILES_5050
+ANIM_OFFSET_CROOKED     = ANIM_OFFSET_50        + TOTAL_ANIM_TILES_50
+ANIM_OFFSET_NOSEGRIND   = ANIM_OFFSET_CROOKED   + TOTAL_ANIM_TILES_CROOKED
+ANIM_OFFSET_BLUNTSLIDE  = ANIM_OFFSET_NOSEGRIND + TOTAL_ANIM_TILES_NOSEGRIND
+ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE+ TOTAL_ANIM_TILES_BLUNTSLIDE
+
+
 
 SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
@@ -334,10 +351,10 @@ ReadController:
     ; Set up the BSFLIP animation
     LDA #1                          ; Set is_animating to true
     STA is_animating
-    LDA #ANIM_OFFSET_BSFLIP         ; Set the starting point for the animation subroutine to look at
+    LDA #ANIM_OFFSET_IDLE         ; Set the starting point for the animation subroutine to look at
     STA current_animation_starting_anim_offset
     CLC
-    ADC #TOTAL_ANIM_TILES_BSFLIP    ; Set the end point
+    ADC #TOTAL_ANIM_TILES_IDLE    ; Set the end point
     STA target_tile_count
     LDA #0                          ; Set the animation timer as zero
     STA animation_frame_timer
@@ -444,13 +461,14 @@ ReadDown_Done:
 ReadA_Done:
 
 ;ReadControls_Done:
+
+    JSR UpdateGravity
+
     LDA is_animating
     AND #1
     BEQ .SkipAnimUpdate
     JSR UpdateAnimation
 .SkipAnimUpdate
-
-    JSR UpdateGravity
 
     ; Copy sprite data to the PPU
     LDA #0
@@ -546,16 +564,16 @@ UpdatePlayer_Grounded:
     LDA #1
     STA is_grounded
     ; Set up the IDLE animation
-    ; LDA #1
-    ; STA is_animating
-    ; LDA #ANIM_OFFSET_IDLE
-    ; STA current_animation_starting_anim_offset
-    ; CLC
-    ; ADC #TOTAL_ANIM_TILES_IDLE   ; Set the end point
-    ; STA target_tile_count
-    ; LDA #0                          ; Set the animation timer as zero
-    ; STA animation_frame_timer
-    ; STA running_tile_count
+    LDA #1
+    STA is_animating
+    LDA #ANIM_OFFSET_CROOKED
+    STA current_animation_starting_anim_offset
+    CLC
+    ADC #TOTAL_ANIM_TILES_CROOKED   ; Set the end point
+    STA target_tile_count
+    LDA #0                          ; Set the animation timer as zero
+    STA animation_frame_timer
+    STA running_tile_count
 UpdatePlayer_End:
     RTS
 ;----------------------------------------
@@ -604,37 +622,45 @@ animations:
     .db $32, $33, $42, $43, $52, $53
     .db $00, $01, $10, $11, $20, $21
 
-;anim_treflip:
+    ;anim_treflip:
     .db $04, $05, $14, $15, $38, $39
     .db $04, $05, $14, $15, $48, $49
     .db $04, $05, $14, $15, $58, $59
     .db $04, $05, $14, $15, $24, $25
 
-;anim_popshuv:
+    ;anim_popshuv:
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $4A, $4B
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $24, $25
 
-Pl_Bs180_1:
-Pl_Bs180_2:
-Pl_Bs180_3:
-Pl_Bs180_4:
+    ;anim_Bs180:
+    .db $06, $07, $16, $17, $26, $27
+    .db $08, $09, $18, $19, $28, $29
+    .db $0A, $0B, $1A, $1B, $2A, $2B
     .db $0C, $0D, $1C, $1D, $2C, $2D
-Pl_Bs180_5:
     .db $0E, $0F, $1E, $1F, $2E, $2F
 
-Pl_Fall_1:
-Pl_Fall_2:
-Pl_Fall_3:
-Pl_Fall_4:
+    ;anim_Fall:
+    .db $90, $91, $A0, $A1, $B0, $B1
+    .db $92, $93, $A2, $A3, $B2, $B3
+    .db $94, $95, $A4, $A5, $B4, $B5
+    .db $96, $97, $A6, $A7, $B6, $B7
 
-Pl_5050:
-Pl_50:
-Pl_Crooked:
-Pl_Nosegrind:
-Pl_Bluntslide:
+    ;anim_5050:
+    .db $3C, $3D, $4C, $4D, $5C, $5D
+    ;anim_50:
+    .db $62, $63, $72, $73, $82, $83
+    ;anim_Crooked:
+    .db $64, $65, $74, $75, $84, $85
+    ;anim_Nosegrind:
+    .db $66, $67, $76, $77, $86, $87
+    ;anim_Bluntslide:
+    .db $68, $69, $78, $79, $88, $89
 
+    ;anim_Brake
+    .db $3E, $3F, $4E, $4F, $5E, $5F
+;----------------------------------------
 sprites:    ; y,  tile,  attrib, x
     ; Player idle
     .db $80, $00, $00, $20
