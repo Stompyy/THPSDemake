@@ -48,7 +48,7 @@ TOTAL_ANIM_TILES_NOSEGRIND  = 6 * 1
 TOTAL_ANIM_TILES_BLUNTSLIDE = 6 * 1
 TOTAL_ANIM_TILES_BRAKE      = 6 * 1
 TOTAL_ANIM_TILES_LAND_REGULAR = 6 * 2
-TOTAL_ANIM_TILES_LAND_FAKIE = 6 * 2;5 
+TOTAL_ANIM_TILES_LAND_FAKIE = 6 * 2 
 ; 254 bit max count of 42*6 tiles
 ; Either work around this with 16-bit
 ; Or work off frames not tiles prob best
@@ -576,7 +576,7 @@ UpdatePlayer_SetGroundedAnim:
 
 ;----------------------------------------
 palettes:
-    .db $31, $09, $19, $29  ; Background
+    .db $31, $3D, $3D, $31  ; Background
     .db $30, $0F, $27, $2C  ; Player sprite
 
 ;----------------------------------------
