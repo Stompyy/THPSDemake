@@ -36,37 +36,43 @@ TOTAL_ANIM_TILES_OLLIE      = 6 * 2
 TOTAL_ANIM_TILES_NOLLIE     = 6 * 2
 TOTAL_ANIM_TILES_INAIR      = 6 * 1
 TOTAL_ANIM_TILES_KICKFLIP   = 6 * 4
-TOTAL_ANIM_TILES_BSFLIP     = 6 * 8
+TOTAL_ANIM_TILES_BSFLIP     = 6 * 4
 TOTAL_ANIM_TILES_TREFLIP    = 6 * 4
 TOTAL_ANIM_TILES_POPSHUV    = 6 * 4
-TOTAL_ANIM_TILES_BS180      = 6 * 5
+TOTAL_ANIM_TILES_BS180      = 6 * 3
 TOTAL_ANIM_TILES_FALL       = 6 * 4
 TOTAL_ANIM_TILES_5050       = 6 * 1
 TOTAL_ANIM_TILES_50         = 6 * 1
 TOTAL_ANIM_TILES_CROOKED    = 6 * 1
 TOTAL_ANIM_TILES_NOSEGRIND  = 6 * 1
 TOTAL_ANIM_TILES_BLUNTSLIDE = 6 * 1
+TOTAL_ANIM_TILES_BRAKE      = 6 * 1
+TOTAL_ANIM_TILES_LAND_REGULAR = 6 * 2
+TOTAL_ANIM_TILES_LAND_FAKIE = 6 * 2;5 
+; 254 bit max count of 42*6 tiles
+; Either work around this with 16-bit
+; Or work off frames not tiles prob best
 
 ; Offset of tile information into the animations .db
 ANIM_OFFSET_IDLE        = 0
-ANIM_OFFSET_PUSH        = ANIM_OFFSET_IDLE      + TOTAL_ANIM_TILES_IDLE
-ANIM_OFFSET_OLLIE       = ANIM_OFFSET_PUSH      + TOTAL_ANIM_TILES_PUSH
-ANIM_OFFSET_NOLLIE      = ANIM_OFFSET_OLLIE     + TOTAL_ANIM_TILES_OLLIE
-ANIM_OFFSET_INAIR       = ANIM_OFFSET_NOLLIE    + TOTAL_ANIM_TILES_NOLLIE
-ANIM_OFFSET_KICKFLIP    = ANIM_OFFSET_INAIR     + TOTAL_ANIM_TILES_INAIR
-ANIM_OFFSET_BSFLIP      = ANIM_OFFSET_KICKFLIP  + TOTAL_ANIM_TILES_KICKFLIP
-ANIM_OFFSET_TREFLIP     = ANIM_OFFSET_BSFLIP    + TOTAL_ANIM_TILES_BSFLIP
-ANIM_OFFSET_POPSHUV     = ANIM_OFFSET_TREFLIP   + TOTAL_ANIM_TILES_TREFLIP
-ANIM_OFFSET_BS180       = ANIM_OFFSET_POPSHUV   + TOTAL_ANIM_TILES_POPSHUV
-ANIM_OFFSET_FALL        = ANIM_OFFSET_BS180     + TOTAL_ANIM_TILES_BS180
-ANIM_OFFSET_5050        = ANIM_OFFSET_FALL      + TOTAL_ANIM_TILES_FALL
-ANIM_OFFSET_50          = ANIM_OFFSET_5050      + TOTAL_ANIM_TILES_5050
-ANIM_OFFSET_CROOKED     = ANIM_OFFSET_50        + TOTAL_ANIM_TILES_50
-ANIM_OFFSET_NOSEGRIND   = ANIM_OFFSET_CROOKED   + TOTAL_ANIM_TILES_CROOKED
-ANIM_OFFSET_BLUNTSLIDE  = ANIM_OFFSET_NOSEGRIND + TOTAL_ANIM_TILES_NOSEGRIND
-ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE+ TOTAL_ANIM_TILES_BLUNTSLIDE
-
-
+ANIM_OFFSET_PUSH        = ANIM_OFFSET_IDLE       + TOTAL_ANIM_TILES_IDLE
+ANIM_OFFSET_OLLIE       = ANIM_OFFSET_PUSH       + TOTAL_ANIM_TILES_PUSH
+ANIM_OFFSET_NOLLIE      = ANIM_OFFSET_OLLIE      + TOTAL_ANIM_TILES_OLLIE
+ANIM_OFFSET_INAIR       = ANIM_OFFSET_NOLLIE     + TOTAL_ANIM_TILES_NOLLIE
+ANIM_OFFSET_KICKFLIP    = ANIM_OFFSET_INAIR      + TOTAL_ANIM_TILES_INAIR
+ANIM_OFFSET_BSFLIP      = ANIM_OFFSET_KICKFLIP   + TOTAL_ANIM_TILES_KICKFLIP
+ANIM_OFFSET_TREFLIP     = ANIM_OFFSET_BSFLIP     + TOTAL_ANIM_TILES_BSFLIP
+ANIM_OFFSET_POPSHUV     = ANIM_OFFSET_TREFLIP    + TOTAL_ANIM_TILES_TREFLIP
+ANIM_OFFSET_BS180       = ANIM_OFFSET_POPSHUV    + TOTAL_ANIM_TILES_POPSHUV
+ANIM_OFFSET_FALL        = ANIM_OFFSET_BS180      + TOTAL_ANIM_TILES_BS180
+ANIM_OFFSET_5050        = ANIM_OFFSET_FALL       + TOTAL_ANIM_TILES_FALL
+ANIM_OFFSET_50          = ANIM_OFFSET_5050       + TOTAL_ANIM_TILES_5050
+ANIM_OFFSET_CROOKED     = ANIM_OFFSET_50         + TOTAL_ANIM_TILES_50
+ANIM_OFFSET_NOSEGRIND   = ANIM_OFFSET_CROOKED    + TOTAL_ANIM_TILES_CROOKED
+ANIM_OFFSET_BLUNTSLIDE  = ANIM_OFFSET_NOSEGRIND  + TOTAL_ANIM_TILES_NOSEGRIND
+ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE + TOTAL_ANIM_TILES_BLUNTSLIDE
+ANIM_OFFSET_LAND_REGULAR = ANIM_OFFSET_BRAKE      + TOTAL_ANIM_TILES_BRAKE
+ANIM_OFFSET_LAND_FAKIE  = ANIM_OFFSET_LAND_REGULAR + TOTAL_ANIM_TILES_LAND_REGULAR
 
 SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
@@ -86,6 +92,7 @@ current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if al
 animation_frame_timer           .rs 1
 is_animating                    .rs 1
 is_grounded                     .rs 1
+is_fakie                        .rs 1
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
 delta_Y                         .rs 1   ; The product of the carry flag subpixel calculations
@@ -209,7 +216,6 @@ LoadPalette_BackgroundLoop:
     STA PPUADDR
     
     LDX #4
-
 LoadPalette_SpriteLoop:
     LDA palettes, X
     STA PPUDATA
@@ -217,10 +223,8 @@ LoadPalette_SpriteLoop:
     CPX #8
     BNE LoadPalette_SpriteLoop   
 
-
     ; Load the player sprite
     LDX #0
-
 .LoadSprite_Next:
     LDA sprites, X
     STA sprite_player, X
@@ -279,6 +283,21 @@ Player_Move .macro
     BMI .done
     JMP .MoveEachTile_loop
 .done
+    .endm
+;----------------------------------------
+Animation_SetUp .macro
+; @Param \1 Anim offset into animation .db memory
+; @Param \2 Total anim tiles for that anim sequence
+    LDA #1
+    STA is_animating
+    LDA \1
+    STA current_animation_starting_anim_offset
+    CLC
+    ADC \2                  ; Set the end point
+    STA target_tile_count
+    LDA #0                  ; Set the animation timer as zero
+    STA animation_frame_timer
+    STA running_tile_count
     .endm
 ;----------------------------------------
 Player_Set_Position .macro
@@ -347,19 +366,10 @@ ReadController:
     LDA is_animating
     AND 0
     BNE ReadLeft_Done
-
     ; Set up the BSFLIP animation
-    LDA #1                          ; Set is_animating to true
-    STA is_animating
-    LDA #ANIM_OFFSET_IDLE         ; Set the starting point for the animation subroutine to look at
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_IDLE    ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
-
+    Animation_SetUp #ANIM_OFFSET_BSFLIP, #TOTAL_ANIM_TILES_BSFLIP
+    LDA #1
+    STA is_fakie    ; To tell use the landing animation
     Player_Move SPRITE_X, #-MOVEMENT_SPEED
 ReadLeft_Done:
 
@@ -370,20 +380,8 @@ ReadLeft_Done:
     LDA is_animating
     AND 0
     BNE ReadRight_Done
-
-
     ; Set up the KICKFLIP animation
-    LDA #1
-    STA is_animating
-    LDA #ANIM_OFFSET_KICKFLIP
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_KICKFLIP   ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
-
+    Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
     Player_Move SPRITE_X, #MOVEMENT_SPEED
 ReadRight_Done:
 
@@ -394,20 +392,10 @@ ReadRight_Done:
     LDA is_animating
     AND 0
     BNE ReadUp_Done
-
     ; Set up the POPSHUV animation
-    LDA #1
-    STA is_animating
-    LDA #ANIM_OFFSET_POPSHUV
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_POPSHUV   ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
-
+    Animation_SetUp #ANIM_OFFSET_POPSHUV, #TOTAL_ANIM_TILES_POPSHUV
 ReadUp_Done:
+
     ; React to Down button
     LDA joypad1_state
     AND #BUTTON_DOWN
@@ -415,19 +403,8 @@ ReadUp_Done:
     LDA is_animating
     AND 0
     BNE ReadDown_Done
-
     ; Set up the TREFLIP animation
-    LDA #1
-    STA is_animating
-    LDA #ANIM_OFFSET_TREFLIP
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_TREFLIP   ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
-
+    Animation_SetUp #ANIM_OFFSET_TREFLIP, #TOTAL_ANIM_TILES_TREFLIP
 ReadDown_Done:
 
     ; React to A button
@@ -438,16 +415,7 @@ ReadDown_Done:
     AND 0
     BNE ReadA_Done
     ; Set up the OLLIE animation
-    LDA #1
-    STA is_animating
-    LDA #ANIM_OFFSET_OLLIE
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_OLLIE   ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
+    Animation_SetUp #ANIM_OFFSET_OLLIE, #TOTAL_ANIM_TILES_OLLIE
     ; Ollie (set player downward speed to jump force)
     LDA #LOW(JUMP_FORCE)
     STA player_downward_speed
@@ -459,6 +427,27 @@ ReadDown_Done:
     LDA #0
     STA is_grounded
 ReadA_Done:
+
+    ; React to B button
+    LDA joypad1_state
+    AND #BUTTON_B
+    BEQ ReadB_Done
+    LDA is_animating
+    AND 0
+    BNE ReadB_Done
+    ; Set up the NOLLIE animation
+    Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
+    ; Ollie (set player downward speed to jump force)
+    LDA #LOW(JUMP_FORCE)
+    STA player_downward_speed
+    LDA #HIGH(JUMP_FORCE)
+    STA player_downward_speed + 1
+    ; Move off the ground to allow forces
+    Player_Move SPRITE_Y, #-1
+    ; Change bool
+    LDA #0
+    STA is_grounded
+ReadB_Done:
 
 ;ReadControls_Done:
 
@@ -559,23 +548,30 @@ UpdatePlayer_Grounded:
     STA player_downward_speed
     STA player_downward_speed+1
     LDA is_grounded
-    AND 0
-    BNE UpdatePlayer_End
+    AND #1
+    BEQ UpdatePlayer_SetGroundedAnim
+    RTS
+UpdatePlayer_SetGroundedAnim:
     LDA #1
     STA is_grounded
-    ; Set up the IDLE animation
-    LDA #1
-    STA is_animating
-    LDA #ANIM_OFFSET_CROOKED
-    STA current_animation_starting_anim_offset
-    CLC
-    ADC #TOTAL_ANIM_TILES_CROOKED   ; Set the end point
-    STA target_tile_count
-    LDA #0                          ; Set the animation timer as zero
-    STA animation_frame_timer
-    STA running_tile_count
-UpdatePlayer_End:
+
+    ; Set land anim between regular, fakie, or fall
+    LDA is_animating
+    AND #1
+    BNE .UpdatePlayer_SetFallAnim
+    LDA is_fakie
+    AND #1
+    BNE .UpdatePlayer_SetFakieLandAnim
+    Animation_SetUp #ANIM_OFFSET_LAND_REGULAR, #TOTAL_ANIM_TILES_LAND_REGULAR
     RTS
+.UpdatePlayer_SetFakieLandAnim:   
+    LDA #0
+    STA is_fakie
+    Animation_SetUp #ANIM_OFFSET_LAND_FAKIE, #TOTAL_ANIM_TILES_LAND_FAKIE
+    RTS
+.UpdatePlayer_SetFallAnim:
+    Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
+    RTS 
 ;----------------------------------------
 
 ;----------------------------------------
@@ -614,33 +610,21 @@ animations:
     .db $06, $07, $16, $17, $36, $37
     .db $08, $09, $18, $19, $46, $47
     .db $0A, $0B, $1A, $1B, $56, $57
-    ; Landing it here maybe?
-    .db $0C, $0D, $1C, $1D, $2C, $2D
-    .db $0E, $0F, $1E, $1F, $2E, $2F
-    ; Do a push after to reorientate feet
-    .db $30, $31, $40, $41, $50, $51
-    .db $32, $33, $42, $43, $52, $53
-    .db $00, $01, $10, $11, $20, $21
-
+    .db $0A, $0B, $1A, $1B, $2A, $2B
     ;anim_treflip:
     .db $04, $05, $14, $15, $38, $39
     .db $04, $05, $14, $15, $48, $49
     .db $04, $05, $14, $15, $58, $59
     .db $04, $05, $14, $15, $24, $25
-
     ;anim_popshuv:
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $4A, $4B
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $24, $25
-
     ;anim_Bs180:
     .db $06, $07, $16, $17, $26, $27
     .db $08, $09, $18, $19, $28, $29
     .db $0A, $0B, $1A, $1B, $2A, $2B
-    .db $0C, $0D, $1C, $1D, $2C, $2D
-    .db $0E, $0F, $1E, $1F, $2E, $2F
-
     ;anim_Fall:
     .db $90, $91, $A0, $A1, $B0, $B1
     .db $92, $93, $A2, $A3, $B2, $B3
@@ -660,6 +644,15 @@ animations:
 
     ;anim_Brake
     .db $3E, $3F, $4E, $4F, $5E, $5F
+    ;anim_land_regular
+    .db $3C, $3D, $4C, $4D, $5C, $5D
+    .db $00, $01, $10, $11, $20, $21
+    ;anim_land_fakie
+    .db $0C, $0D, $1C, $1D, $2C, $2D
+    .db $0E, $0F, $1E, $1F, $2E, $2F
+    .db $30, $31, $40, $41, $50, $51
+    .db $32, $33, $42, $43, $52, $53
+    .db $00, $01, $10, $11, $20, $21
 ;----------------------------------------
 sprites:    ; y,  tile,  attrib, x
     ; Player idle
