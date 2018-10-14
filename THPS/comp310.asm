@@ -68,7 +68,7 @@ target_tile_count               .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
 animation_frame_timer           .rs 1
 is_animating                    .rs 1
-
+is_grounded                     .rs 1
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
 delta_Y                         .rs 1   ; The product of the carry flag subpixel calculations
@@ -236,6 +236,9 @@ LoadAttributes2_Loop:
     STA PPUDATA
     DEX
     BNE LoadAttributes2_Loop
+
+    LDA #1
+    STA is_grounded
 
     RTS ; End subroutine (returns back to the point it was called)
 
@@ -435,9 +438,9 @@ ReadDown_Done:
     STA player_downward_speed + 1
     ; Move off the ground to allow forces
     Player_Move SPRITE_Y, #-1
-    ; ; Change bool
-    ; LDA #0
-    ; STA is_grounded
+    ; Change bool
+    LDA #0
+    STA is_grounded
 ReadA_Done:
 
 ;ReadControls_Done:
@@ -537,6 +540,22 @@ UpdatePlayer_Grounded:
     LDA #0                          ; set player_speed to 0
     STA player_downward_speed
     STA player_downward_speed+1
+    LDA is_grounded
+    AND 0
+    BNE UpdatePlayer_End
+    LDA #1
+    STA is_grounded
+    ; Set up the IDLE animation
+    ; LDA #1
+    ; STA is_animating
+    ; LDA #ANIM_OFFSET_IDLE
+    ; STA current_animation_starting_anim_offset
+    ; CLC
+    ; ADC #TOTAL_ANIM_TILES_IDLE   ; Set the end point
+    ; STA target_tile_count
+    ; LDA #0                          ; Set the animation timer as zero
+    ; STA animation_frame_timer
+    ; STA running_tile_count
 UpdatePlayer_End:
     RTS
 ;----------------------------------------
