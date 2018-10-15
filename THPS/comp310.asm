@@ -71,7 +71,7 @@ ANIM_OFFSET_CROOKED     = ANIM_OFFSET_50         + TOTAL_ANIM_TILES_50
 ANIM_OFFSET_NOSEGRIND   = ANIM_OFFSET_CROOKED    + TOTAL_ANIM_TILES_CROOKED
 ANIM_OFFSET_BLUNTSLIDE  = ANIM_OFFSET_NOSEGRIND  + TOTAL_ANIM_TILES_NOSEGRIND
 ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE + TOTAL_ANIM_TILES_BLUNTSLIDE
-ANIM_OFFSET_LAND_REGULAR = ANIM_OFFSET_BRAKE      + TOTAL_ANIM_TILES_BRAKE
+ANIM_OFFSET_LAND_REGULAR = ANIM_OFFSET_BRAKE     + TOTAL_ANIM_TILES_BRAKE
 ANIM_OFFSET_LAND_FAKIE  = ANIM_OFFSET_LAND_REGULAR + TOTAL_ANIM_TILES_LAND_REGULAR
 
 SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
@@ -79,7 +79,8 @@ GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 
 FRICTION                    = -2
-PUSH_FORCE                  = 2 * 256 + 128  ; In subpixels/frame
+PUSH_FORCE                  = 3 * 256 + 128  ; In subpixels/frame
+BRAKE_FORCE                 = 1 * 256; + 128  ; In subpixels/frame
 
 ;----------------------------------------
 ;;; All get initialised to zero
@@ -95,6 +96,7 @@ animation_frame_timer           .rs 1
 is_animating                    .rs 1
 is_grounded                     .rs 1
 is_fakie                        .rs 1
+is_performing_trick             .rs 1
 
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
@@ -402,13 +404,23 @@ ReadController:
     AND #BUTTON_LEFT
     BEQ ReadLeft_Done
     LDA is_animating
-    AND 0
-    BNE ReadLeft_Done
-    ; Set up the BSFLIP animation
+    CMP #1
+    BEQ ReadLeft_Done
+    LDA is_grounded
+    CMP #1
+    BEQ .DoTrick_Brake
+    ; Else do BSFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_BSFLIP, #TOTAL_ANIM_TILES_BSFLIP
     LDA #1
-    STA is_fakie    ; To tell use the landing animation
-    Player_Move SPRITE_X, #-MOVEMENT_SPEED
+    STA is_performing_trick
+    STA is_fakie    ; To tell the landing animation which anim to use
+    JMP ReadLeft_Done
+.DoTrick_Brake
+    Animation_SetUp #ANIM_OFFSET_BRAKE, #TOTAL_ANIM_TILES_BRAKE
+    LDA #LOW(BRAKE_FORCE)
+    STA forward_speed
+    LDA #HIGH(BRAKE_FORCE)
+    STA forward_speed+1
 ReadLeft_Done:
 
     ; React to Right button
@@ -416,17 +428,22 @@ ReadLeft_Done:
     AND #BUTTON_RIGHT
     BEQ ReadRight_Done
     LDA is_animating
-    AND 0
-    BNE ReadRight_Done
-    ; Set up the KICKFLIP animation
-    ;Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
-    ;Player_Move SPRITE_X, #MOVEMENT_SPEED
+    CMP #1
+    BEQ ReadRight_Done
+    LDA is_grounded
+    CMP #1
+    BEQ .DoTrick_Push
+    ; Else do KICKFLIP if !is_grounded
+    Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
+    LDA #1
+    STA is_performing_trick
+    JMP ReadRight_Done
+.DoTrick_Push:
     Animation_SetUp #ANIM_OFFSET_PUSH, #TOTAL_ANIM_TILES_PUSH
     LDA #LOW(PUSH_FORCE)
     STA forward_speed
     LDA #HIGH(PUSH_FORCE)
-    STA forward_speed + 1
-
+    STA forward_speed+1
 ReadRight_Done:
 
     ; React to Up button
@@ -434,10 +451,18 @@ ReadRight_Done:
     AND #BUTTON_UP
     BEQ ReadUp_Done
     LDA is_animating
-    AND 0
-    BNE ReadUp_Done
-    ; Set up the POPSHUV animation
+    CMP #1
+    BEQ ReadUp_Done
+    LDA is_grounded
+    CMP #1
+    BEQ .DoTrick_NoseManual
+    ; Else do POPSHUV if !is_grounded
     Animation_SetUp #ANIM_OFFSET_POPSHUV, #TOTAL_ANIM_TILES_POPSHUV
+    LDA #1
+    STA is_performing_trick
+    JMP ReadUp_Done
+.DoTrick_NoseManual:
+    Animation_SetUp #ANIM_OFFSET_NOSEGRIND, #TOTAL_ANIM_TILES_NOSEGRIND
 ReadUp_Done:
 
     ; React to Down button
@@ -445,10 +470,18 @@ ReadUp_Done:
     AND #BUTTON_DOWN
     BEQ ReadDown_Done
     LDA is_animating
-    AND 0
-    BNE ReadDown_Done
-    ; Set up the TREFLIP animation
+    CMP #1
+    BEQ ReadDown_Done
+    LDA is_grounded
+    CMP #1
+    BEQ .DoTrick_Manual
+    ; Else do TREFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_TREFLIP, #TOTAL_ANIM_TILES_TREFLIP
+    LDA #1
+    STA is_performing_trick
+    JMP ReadDown_Done
+.DoTrick_Manual:
+    Animation_SetUp #ANIM_OFFSET_50, #TOTAL_ANIM_TILES_50
 ReadDown_Done:
 
     ; React to A button
@@ -456,8 +489,11 @@ ReadDown_Done:
     AND #BUTTON_A
     BEQ ReadA_Done
     LDA is_animating
-    AND 0
-    BNE ReadA_Done
+    CMP #1
+    BEQ ReadA_Done
+    LDA is_grounded
+    CMP #0
+    BEQ ReadA_Done
     ; Set up the OLLIE animation
     Animation_SetUp #ANIM_OFFSET_OLLIE, #TOTAL_ANIM_TILES_OLLIE
     ; Ollie (set player downward speed to jump force)
@@ -466,7 +502,7 @@ ReadDown_Done:
     LDA #HIGH(JUMP_FORCE)
     STA player_downward_speed + 1
     ; Move off the ground to allow forces
-    Player_Move SPRITE_Y, #-1
+    Player_Move SPRITE_Y, #-2
     ; Change bool
     LDA #0
     STA is_grounded
@@ -477,8 +513,11 @@ ReadA_Done:
     AND #BUTTON_B
     BEQ ReadB_Done
     LDA is_animating
-    AND 0
-    BNE ReadB_Done
+    CMP #1
+    BEQ ReadB_Done
+    LDA is_grounded
+    CMP #0
+    BEQ ReadB_Done
     ; Set up the NOLLIE animation
     Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
     ; Ollie (set player downward speed to jump force)
@@ -500,7 +539,7 @@ ReadB_Done:
     JSR UpdateGravity
 
     LDA is_animating
-    AND #1
+    CMP #0
     BEQ .SkipAnimUpdate
     JSR UpdateAnimation
 .SkipAnimUpdate
@@ -540,8 +579,8 @@ LoadNextPlayerSprite:
     CPX target_tile_count   ; Check if we've reached the end of the anim sequence
     BNE .skipReset
     LDA #0                  ; If equal, then set is_animating to false
-    CLC
     STA is_animating
+    STA is_performing_trick
     RTS
 .skipReset
     STX current_animation_starting_anim_offset  ; Update the runniing count for the next frame
@@ -621,20 +660,19 @@ UpdatePlayer_Grounded:
     STA player_downward_speed
     STA player_downward_speed+1
     LDA is_grounded
-    AND #1
+    CMP #0
     BEQ UpdatePlayer_SetGroundedAnim
     RTS
 UpdatePlayer_SetGroundedAnim:
     LDA #1
     STA is_grounded
-
     ; Set land anim between regular, fakie, or fall
-    LDA is_animating
-    AND #1
-    BNE .UpdatePlayer_SetFallAnim
+    LDA is_performing_trick
+    CMP #1
+    BEQ .UpdatePlayer_SetFallAnim
     LDA is_fakie
-    AND #1
-    BNE .UpdatePlayer_SetFakieLandAnim
+    CMP #1
+    BEQ .UpdatePlayer_SetFakieLandAnim
     Animation_SetUp #ANIM_OFFSET_LAND_REGULAR, #TOTAL_ANIM_TILES_LAND_REGULAR
     RTS
 .UpdatePlayer_SetFakieLandAnim:   
@@ -651,8 +689,6 @@ UpdatePlayer_SetGroundedAnim:
 palettes:
     .db $31, $3D, $3D, $31  ; Background
     .db $30, $0F, $27, $2C  ; Player sprite
-
-;----------------------------------------
 
 ;----------------------------------------
 
