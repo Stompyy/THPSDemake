@@ -78,24 +78,34 @@ SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 
+FRICTION                    = -2
+PUSH_FORCE                  = 2 * 256 + 128  ; In subpixels/frame
+
 ;----------------------------------------
 ;;; All get initialised to zero
     .rsset $0000        ; Start counter at this, then .rs 1 increments
 joypad1_state                   .rs 1
-jump_y_momentum                 .rs 1
-literal_jump_momentum           .rs 1
 
 current_animation_start_tile    .rs 1
 running_tile_count              .rs 1
 target_tile_count               .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
 animation_frame_timer           .rs 1
+
 is_animating                    .rs 1
 is_grounded                     .rs 1
 is_fakie                        .rs 1
+
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
 delta_Y                         .rs 1   ; The product of the carry flag subpixel calculations
+
+forward_speed                   .rs 2   ; In subpixel per frame - 16 bits
+forward_speed_sub               .rs 1   ; in subpixels
+delta_X                         .rs 1   ; The product of the carry flag subpixel calculations
+
+scroll_x            .rs 1
+scroll_page         .rs 1
 
     .rsset $0200
 sprite_player       .rs 4 * 6
@@ -341,6 +351,34 @@ Player_Set_Position .macro
 
 NMI:        ; Non maskable interrupt
 
+; Scroll - Do this first as heavy, to avoid potential flickering as screen iss already being rendered at end
+    LDA scroll_x
+    CLC
+    ADC delta_X
+    STA scroll_x
+    STA PPUSCROLL   ; x scroll
+    BCC Scroll_NoWrap   ; If carry flag is set so has overflowed over 255
+
+    ; scroll_x has wrapped, so switch scroll_page
+    LDA scroll_page
+    EOR #1  ; ExcusiveOr (if ==1 then =0, else if ==0 then =1)
+    STA scroll_page
+    ORA #%10000000      ; orIn, sets the normal PPUCTRL value set in init that allows NMI scrolling
+    STA PPUCTRL
+
+Scroll_NoWrap:
+    LDA #0
+    STA PPUSCROLL   ; y scroll
+
+    ; Chwck if a column of background needs to be generated
+    LDA scroll_x
+    AND #7          ; Wipe out everything from the 8 bit onwards
+                    ; if zero flag set, then generate
+    BNE Scroll_NoGenerate   ; else skip
+
+    ;JSR GenerateColumn
+Scroll_NoGenerate:
+
 ;Controls
     ; Initialise controller 1
     LDA #1
@@ -381,8 +419,14 @@ ReadLeft_Done:
     AND 0
     BNE ReadRight_Done
     ; Set up the KICKFLIP animation
-    Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
-    Player_Move SPRITE_X, #MOVEMENT_SPEED
+    ;Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
+    ;Player_Move SPRITE_X, #MOVEMENT_SPEED
+    Animation_SetUp #ANIM_OFFSET_PUSH, #TOTAL_ANIM_TILES_PUSH
+    LDA #LOW(PUSH_FORCE)
+    STA forward_speed
+    LDA #HIGH(PUSH_FORCE)
+    STA forward_speed + 1
+
 ReadRight_Done:
 
     ; React to Up button
@@ -451,6 +495,8 @@ ReadB_Done:
 
 ;ReadControls_Done:
 
+    JSR UpdateSpeed
+
     JSR UpdateGravity
 
     LDA is_animating
@@ -464,6 +510,11 @@ ReadB_Done:
     STA OAMADDR
     LDA #$02    ; Location of the sprite? In memory
     STA OAMDMA
+
+    ; Set PPUCTRL register
+    LDA scroll_page
+    ORA #%10000000
+    STA PPUCTRL
 
     RTI     ; Return from interrupt
 
@@ -511,6 +562,28 @@ UpdateAnimation:
     INX
     STX animation_frame_timer
 .SkipIncrement:
+    RTS
+;----------------------------------------
+UpdateSpeed:
+    ; First update 16 bit forward_speed
+    LDA forward_speed
+    CLC
+    ADC #LOW(FRICTION)              ; Just get the low 8 bits of the 16 bit binary value
+    STA forward_speed
+    LDA forward_speed+1             ; Gets the next .rs slot along to return the high 8 bits
+    ADC #HIGH(FRICTION)             ; NB: don't clear the carry flag! 16-bit carry over
+    STA forward_speed+1
+
+    ; Second, update forward_speed_sub (pixel Position)
+    LDA forward_speed_sub
+    CLC
+    ADC forward_speed       ; (the low byte)
+    STA forward_speed_sub
+    LDA #0                          ; Start with an empty register
+    ADC forward_speed+1     ; Add on the player downward speed High value including the important carry flag value
+    BMI .UpdateSpeed_DontUpdate
+    STA delta_X                     ; To use as a parameter in the following macros call
+.UpdateSpeed_DontUpdate    
     RTS
 ;----------------------------------------
 UpdateGravity:
