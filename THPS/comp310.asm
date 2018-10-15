@@ -30,16 +30,20 @@ BUTTON_RIGHT    = %00000001
 MOVEMENT_SPEED              = 1
 ANIM_FRAME_CHANGE_TIME      = 8
 
-TOTAL_ANIM_TILES_IDLE       = 6 * 1
+LEDGE_DISTANCE   = 12
+LEDGE_LENGTH_RANDOM_MASK = 7
+LEDGE_MINIMUM_LENGTH  = 4
+
+TOTAL_ANIM_TILES_IDLE       = 6 * 1 ; Not used
 TOTAL_ANIM_TILES_PUSH       = 6 * 3
 TOTAL_ANIM_TILES_OLLIE      = 6 * 2
 TOTAL_ANIM_TILES_NOLLIE     = 6 * 2
-TOTAL_ANIM_TILES_INAIR      = 6 * 1
+TOTAL_ANIM_TILES_INAIR      = 6 * 1 ; Not used
 TOTAL_ANIM_TILES_KICKFLIP   = 6 * 4
 TOTAL_ANIM_TILES_BSFLIP     = 6 * 4
 TOTAL_ANIM_TILES_TREFLIP    = 6 * 4
 TOTAL_ANIM_TILES_POPSHUV    = 6 * 4
-TOTAL_ANIM_TILES_BS180      = 6 * 3
+TOTAL_ANIM_TILES_BS180      = 6 * 3 ; Not used yet...
 TOTAL_ANIM_TILES_FALL       = 6 * 4
 TOTAL_ANIM_TILES_5050       = 6 * 1
 TOTAL_ANIM_TILES_50         = 6 * 1
@@ -52,6 +56,9 @@ TOTAL_ANIM_TILES_LAND_FAKIE = 6 * 2
 ; 254 bit max count of 42*6 tiles
 ; Either work around this with 16-bit
 ; Or work off frames not tiles prob best
+; Or...
+; Get rid of the final frame that sets back to idle/in_air
+; and have an is_grounded check on the anim_end that sets the sprite
 
 ; Offset of tile information into the animations .db
 ANIM_OFFSET_IDLE        = 0
@@ -79,7 +86,7 @@ GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 
 FRICTION                    = -2
-PUSH_FORCE                  = 3 * 256 + 128  ; In subpixels/frame
+PUSH_FORCE                  = 2 * 256 + 128  ; In subpixels/frame
 BRAKE_FORCE                 = 1 * 256; + 128  ; In subpixels/frame
 
 ;----------------------------------------
@@ -108,6 +115,12 @@ delta_X                         .rs 1   ; The product of the carry flag subpixel
 
 scroll_x            .rs 1
 scroll_page         .rs 1
+
+seed                .rs 2
+generate_x          .rs 1   ; which column to generate next
+                            ; could be any of 63
+generate_counter    .rs 1
+generate_length_length     .rs 1
 
     .rsset $0200
 sprite_player       .rs 4 * 6
@@ -202,6 +215,12 @@ Forever:
 
 ;----------------------------------------
 InitialiseGame:
+
+    ; Seed the random number generator
+    LDA #$12    ; Arbitary 1234 (non zero value)
+    STA seed
+    LDA #$34
+    STA seed+1
 
     ; Reset the PPU high/low latch
     LDA PPUSTATUS
@@ -403,7 +422,7 @@ ReadController:
     LDA joypad1_state
     AND #BUTTON_LEFT
     BEQ ReadLeft_Done
-    LDA is_animating
+    LDA is_animating        ; If already animating skip to the end
     CMP #1
     BEQ ReadLeft_Done
     LDA is_grounded
@@ -493,7 +512,7 @@ ReadDown_Done:
     BEQ ReadA_Done
     LDA is_grounded
     CMP #0
-    BEQ ReadA_Done
+    BEQ .DoTrick_BS180
     ; Set up the OLLIE animation
     Animation_SetUp #ANIM_OFFSET_OLLIE, #TOTAL_ANIM_TILES_OLLIE
     ; Ollie (set player downward speed to jump force)
@@ -502,10 +521,16 @@ ReadDown_Done:
     LDA #HIGH(JUMP_FORCE)
     STA player_downward_speed + 1
     ; Move off the ground to allow forces
-    Player_Move SPRITE_Y, #-2
+    Player_Move SPRITE_Y, #-2   ; 2 is enough to disengage from is_grounded check, 1 is immediately discounted by gravity
     ; Change bool
     LDA #0
     STA is_grounded
+    JMP ReadA_Done
+.DoTrick_BS180:
+    Animation_SetUp #ANIM_OFFSET_BS180, #TOTAL_ANIM_TILES_BS180
+    LDA #1
+    ;STA is_performing_trick ; disable o let player slide the trick around in last second without falling
+    STA is_fakie    ; To tell the landing animation which anim to use
 ReadA_Done:
 
     ; React to B button
@@ -526,7 +551,7 @@ ReadA_Done:
     LDA #HIGH(JUMP_FORCE)
     STA player_downward_speed + 1
     ; Move off the ground to allow forces
-    Player_Move SPRITE_Y, #-1
+    Player_Move SPRITE_Y, #-2
     ; Change bool
     LDA #0
     STA is_grounded
@@ -684,10 +709,118 @@ UpdatePlayer_SetGroundedAnim:
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
     RTS 
 ;----------------------------------------
+; prng - http://wiki.nesdev.com/w/index.php/Random_number_generator
+;
+; Returns a random 8-bit number in A (0-255), clobbers (Overwrites) X (0).
+;
+; Requires a 2-byte value on the zero page called "seed".
+; Initialize seed to any value except 0 before the first call to prng.
+; (A seed value of 0 will cause prng to always return 0.)
+;
+; This is a 16-bit Galois linear feedback shift register with polynomial $002D.
+; The sequence of numbers it generates will repeat after 65535 calls.
+;
+; Execution time is an average of 125 cycles (excluding jsr and rts)
+prng:
+	LDX #8     ; iteration count (generates 8 bits)
+	LDA seed+0
+prng_1:
+	ASL A       ; shift the register
+	ROL seed+1
+	BCC prng_2
+	EOR #$2D   ; apply XOR feedback whenever a 1 bit is shifted out
+prng_2:
+	DEX
+	BNE prng_1
+	STA seed+0
+	CMP #0     ; reload flags
+	RTS
+;----------------------------------------
+GenerateColumn:
+    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
+    LDA #%00000100
+    STA PPUCTRL ; Have to restore back to previous values later
+
+    ; find most significant byte of PPU address
+    ; See video 8, 6:10 for the explanation of which bit to look at
+    LDA generate_x
+    AND #32     ; The halfway point of 63 potential columns spread over two pages
+                ; Accumulator = 0 for nametable $2000, 32 for nametable $2400
+
+    LSR A
+    LSR A       ; Bitshift right == divide by 2
+    LSR A       ; so  3 times == divide by 8. So accumulator = 0 or 4
+    ; No need to CLC as bitshift will have shifted a #0 into it
+    ADC #$20    ; A now = $20 or $24
+    STA PPUADDR
+
+    ; Find least significant byte of PPU address
+    LDA generate_x
+    AND #31     ; Gets the 0-32 ... video 8 10:30 ??
+    STA PPUADDR
+
+    ; Write the data
+    LDA generate_counter
+    BNE GenerateColumn_Ledge
+    ; Set up new pipe
+    JSR prng
+    AND #LEDGE_LENGTH_RANDOM_MASK ; wipe out values over, get a value upto 8
+    CLC
+    ADC #LEDGE_MINIMUM_LENGTH ; gives a value between 4 and 12
+    STA generate_length_length
+    LDA generate_counter    ; load this back in
+
+
+GenerateColumn_Ledge:
+    ; pipe is 4 tiles wide so do empty if more than 4
+    CMP #4  
+    BCS GenerateColumn_Empty
+
+    ; Else, generate ledge
+    LDX #25     ; 30 rows
+    LDA #$E2    ; Location of an empty tile in the sprite sheet
+.GenerateEmpty:
+    STA PPUDATA
+    DEX
+    BNE .GenerateEmpty
+    LDX #5
+    LDA #$F0
+.GenerateLedge:
+    STA PPUDATA
+    DEX
+    BNE GenerateColumn_End
+
+GenerateColumn_Empty:
+    LDX #30     ; 30 rows
+    LDA #$E2    ; Location of an empty tile in the sprite sheet
+GenerateColumn_Empty_Loop:
+    STA PPUDATA
+    DEX
+    BNE GenerateColumn_Empty_Loop
+
+GenerateColumn_End:
+    ; Increment generate_x
+    LDA generate_x
+    CLC
+    ADC #1
+    AND #63     ; Wrap back to zero at 64
+                ; && comparing will remove binary byte for 64 upwards
+                ; video 8 14:30
+    STA generate_x
+    ; Increment generate_counter
+    LDA generate_counter
+    CLC
+    ADC #1
+    CMP #LEDGE_DISTANCE
+    BCC GenerateColumn_NoCounterWrap
+    LDA #0
+GenerateColumn_NoCounterWrap:
+    STA generate_counter
+    RTS
 
 ;----------------------------------------
 palettes:
-    .db $31, $3D, $3D, $31  ; Background
+    .db $30, $3D, $2D, $37  ; Background
     .db $30, $0F, $27, $2C  ; Player sprite
 
 ;----------------------------------------
