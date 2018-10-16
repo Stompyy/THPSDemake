@@ -81,7 +81,7 @@ ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE + TOTAL_ANIM_TILES_BLUNTSLIDE
 ANIM_OFFSET_LAND_REGULAR = ANIM_OFFSET_BRAKE     + TOTAL_ANIM_TILES_BRAKE
 ANIM_OFFSET_LAND_FAKIE  = ANIM_OFFSET_LAND_REGULAR + TOTAL_ANIM_TILES_LAND_REGULAR
 
-SCREEN_BOTTOM_Y             = 204   ; 224, 240 PAL
+SCREEN_BOTTOM_Y             = 206   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 
@@ -100,6 +100,9 @@ target_tile_count               .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
 animation_frame_timer           .rs 1
 
+; Consider having all these single bit bools kept in one player_state byte.
+; Can use AND or CMP >= (or combination) to check is_grounded etc
+; IS_GROUNDED = %00000100
 is_animating                    .rs 1
 is_grounded                     .rs 1
 is_fakie                        .rs 1
@@ -213,86 +216,6 @@ vblankwait2:      ; Second wait for vblank, PPU is ready after this
 Forever:
     JMP Forever     ; Jump back to Forever, infinite loop
 
-;----------------------------------------
-InitialiseGame:
-
-    ; Seed the random number generator
-    LDA #$12    ; Arbitary 1234 (non zero value)
-    STA seed
-    LDA #$34
-    STA seed+1
-
-    ; Reset the PPU high/low latch
-    LDA PPUSTATUS
-
-    ; Write address 3F00 (Background palette) to the PPU
-    LDA #$3F
-    STA PPUADDR
-    LDA #$00
-    STA PPUADDR
-
-    LDX #0
-
-LoadPalette_BackgroundLoop:
-    LDA palettes, X
-    STA PPUDATA
-    INX
-    CPX #4
-    BNE LoadPalette_BackgroundLoop    
-
-    ; Write address 3F10 (sprite palette) to the PPU next
-    LDA #$3F
-    STA PPUADDR
-    LDA #$10
-    STA PPUADDR
-    
-    LDX #4
-LoadPalette_SpriteLoop:
-    LDA palettes, X
-    STA PPUDATA
-    INX
-    CPX #8
-    BNE LoadPalette_SpriteLoop   
-
-    ; Load the player sprite
-    LDX #0
-.LoadSprite_Next:
-    LDA sprites, X
-    STA sprite_player, X
-    INX
-    CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
-    BNE .LoadSprite_Next
-
-    ; Load attribute data that each 16 x 16 uses
-    LDA #$23        ; Write address $23C0 to PPUADDR register
-    STA PPUADDR     ; PPUADDR is big endian for some reason??
-    LDA #$C0
-    STA PPUADDR
-
-    LDA #%00000000  ; set all to first colour palette
-    LDX #64
-LoadAttributes_Loop:
-    STA PPUDATA
-    DEX
-    BNE LoadAttributes_Loop
-
-    ; Load attribute data
-    LDA #$27
-    STA PPUADDR
-    LDA #$C0
-    STA PPUADDR
-
-    LDA #%00000000
-    LDX #64
-LoadAttributes2_Loop:
-    STA PPUDATA
-    DEX
-    BNE LoadAttributes2_Loop
-
-    LDA #1
-    STA is_grounded
-
-    RTS ; End subroutine (returns back to the point it was called)
 
 ;----------------------------------------
 ;;;;;;;----MACROS----;;;;;;
@@ -332,39 +255,41 @@ Animation_SetUp .macro
     .endm
 ;----------------------------------------
 Player_Set_Position .macro
-; @Param \1 move amount
-; @Param \2 move axis
-    LDX #20
-    LDY #16
+; @Param \1 Y position
+    LDX #0
+    LDY #0
+    LDA \1
+    SEC
+    SBC #23
 .MoveEachTile_loop2:
-    TYA
-    
+    STA sprite_player + SPRITE_Y, X
+
+    INX
+    INX
+    INX
+    INX
+
+    STA sprite_player + SPRITE_Y, X
+
+    CPY #16
+    BEQ .done2
+
     CLC
-    ADC \2
-    STA sprite_player + \1, X
-    SEC
-    DEX
-    DEX
-    DEX
-    DEX
-    STA sprite_player + \1, X
-    SEC
+    ADC #8
 
-    DEX
-    DEX
-    DEX
-    DEX
+    INX
+    INX
+    INX
+    INX
 
-    DEY
-    DEY
-    DEY
-    DEY
-    DEY
-    DEY
-    DEY
-    DEY
-
-    BMI .done2
+    INY
+    INY
+    INY
+    INY
+    INY
+    INY
+    INY
+    INY
     JMP .MoveEachTile_loop2
 .done2
     .endm
@@ -569,6 +494,12 @@ ReadB_Done:
     JSR UpdateAnimation
 .SkipAnimUpdate
 
+    LDA is_grounded
+    CMP #1
+    BNE .SkipPlayerForceGroundedPosition
+    Player_Set_Position #SCREEN_BOTTOM_Y    ; Have to force the Y pos sometimes? gravity stuff
+.SkipPlayerForceGroundedPosition    
+
     ; Copy sprite data to the PPU
     LDA #0
     STA OAMADDR
@@ -584,6 +515,94 @@ ReadB_Done:
 
 ;----------------------------------------
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
+;----------------------------------------
+InitialiseGame:
+
+    ; Seed the random number generator
+    LDA #$12    ; Arbitary 1234 (non zero value)
+    STA seed
+    LDA #$34
+    STA seed+1
+
+    ; Reset the PPU high/low latch
+    LDA PPUSTATUS
+
+    ; Write address 3F00 (Background palette) to the PPU
+    LDA #$3F
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDX #0
+
+LoadPalette_BackgroundLoop:
+    LDA palettes, X
+    STA PPUDATA
+    INX
+    CPX #4
+    BNE LoadPalette_BackgroundLoop    
+
+    ; Write address 3F10 (sprite palette) to the PPU next
+    LDA #$3F
+    STA PPUADDR
+    LDA #$10
+    STA PPUADDR
+    
+    LDX #4
+LoadPalette_SpriteLoop:
+    LDA palettes, X
+    STA PPUDATA
+    INX
+    CPX #8
+    BNE LoadPalette_SpriteLoop   
+
+    ; Load the player sprite
+    LDX #0
+.LoadSprite_Next:
+    LDA sprites, X
+    STA sprite_player, X
+    INX
+    CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
+    BNE .LoadSprite_Next
+
+    ; Load attribute data that each 16 x 16 uses
+    LDA #$23        ; Write address $23C0 to PPUADDR register
+    STA PPUADDR     ; PPUADDR is big endian for some reason??
+    LDA #$C0
+    STA PPUADDR
+
+    LDA #%00000000  ; set all to first colour palette
+    LDX #64
+LoadAttributes_Loop:
+    STA PPUDATA
+    DEX
+    BNE LoadAttributes_Loop
+
+    ; Load attribute data
+    LDA #$27
+    STA PPUADDR
+    LDA #$C0
+    STA PPUADDR
+
+    LDA #%00000000
+    LDX #64
+LoadAttributes2_Loop:
+    STA PPUDATA
+    DEX
+    BNE LoadAttributes2_Loop
+
+    LDA #1
+    STA is_grounded
+    
+     ; Generate initial level
+InitialGeneration_Loop:
+    JSR GenerateColumn
+    LDA generate_x
+    CMP #63
+    BCC InitialGeneration_Loop
+    JSR GenerateColumn  ; #63 + 1
+
+    RTS ; End subroutine (returns back to the point it was called)
 ;----------------------------------------
 LoadNextPlayerSprite:
 ; Just change the tile data
@@ -641,13 +660,19 @@ UpdateSpeed:
     ; Second, update forward_speed_sub (pixel Position)
     LDA forward_speed_sub
     CLC
-    ADC forward_speed       ; (the low byte)
+    ADC forward_speed               ; (the low byte)
     STA forward_speed_sub
     LDA #0                          ; Start with an empty register
-    ADC forward_speed+1     ; Add on the player downward speed High value including the important carry flag value
-    BMI .UpdateSpeed_DontUpdate
+    ADC forward_speed+1             ; Add on the player downward speed High value including the important carry flag value
+    BMI .UpdateSpeed_ZeroSpeed
     STA delta_X                     ; To use as a parameter in the following macros call
-.UpdateSpeed_DontUpdate    
+    RTS
+.UpdateSpeed_ZeroSpeed:
+    LDA #0
+    STA delta_X
+    STA forward_speed
+    STA forward_speed+1
+.UpdateSpeed_End:
     RTS
 ;----------------------------------------
 UpdateGravity:
@@ -770,33 +795,48 @@ GenerateColumn:
     STA generate_length_length
     LDA generate_counter    ; load this back in
 
+;-------
 
 GenerateColumn_Ledge:
     ; pipe is 4 tiles wide so do empty if more than 4
     CMP #4  
     BCS GenerateColumn_Empty
 
-    ; Else, generate ledge
-    LDX #25     ; 30 rows
-    LDA #$E2    ; Location of an empty tile in the sprite sheet
+;-------
+
+;     ; Else, generate ledge
+;     LDX #25     ; 30 rows
+;     LDA #$F2    ; Location of an empty tile in the sprite sheet
+; .GenerateEmpty:
+;     STA PPUDATA
+;     DEX
+;     BNE .GenerateEmpty
+;     LDX #5
+;     LDA #$F0
+; .GenerateLedge:
+;     STA PPUDATA
+;     DEX
+;     BNE .GenerateLedge
+
+;-------
+
+GenerateColumn_Empty:
+    LDX #26     ; 30 rows
+    LDA #$E3    ; Location of an wall tile in the sprite sheet
 .GenerateEmpty:
     STA PPUDATA
     DEX
     BNE .GenerateEmpty
-    LDX #5
-    LDA #$F0
+    LDA #$F0    ; Floor
+    STA PPUDATA
+    LDX #3
+    LDA #$F2    ; Underground
 .GenerateLedge:
     STA PPUDATA
     DEX
-    BNE GenerateColumn_End
+    BNE .GenerateLedge
 
-GenerateColumn_Empty:
-    LDX #30     ; 30 rows
-    LDA #$E2    ; Location of an empty tile in the sprite sheet
-GenerateColumn_Empty_Loop:
-    STA PPUDATA
-    DEX
-    BNE GenerateColumn_Empty_Loop
+;-------
 
 GenerateColumn_End:
     ; Increment generate_x
@@ -807,6 +847,7 @@ GenerateColumn_End:
                 ; && comparing will remove binary byte for 64 upwards
                 ; video 8 14:30
     STA generate_x
+    
     ; Increment generate_counter
     LDA generate_counter
     CLC
