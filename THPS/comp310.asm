@@ -27,12 +27,28 @@ BUTTON_DOWN     = %00000100
 BUTTON_LEFT     = %00000010
 BUTTON_RIGHT    = %00000001
 
+KONAMI_CHECK_STEP_1 = %00000000
+KONAMI_CHECK_STEP_2 = %00000001
+KONAMI_CHECK_STEP_3 = %00000011
+KONAMI_CHECK_STEP_4 = %00000111
+KONAMI_CHECK_STEP_5 = %00001111
+KONAMI_CHECK_STEP_6 = %00011111
+KONAMI_CHECK_STEP_7 = %00111111
+KONAMI_CHECK_STEP_8 = %01111111
+KONAMI_CHECK_STEP_9 = %11111111
+
+IS_ANIMATING        = %00000001
+IS_GROUNDED         = %00000010
+IS_FAKIE            = %00000100
+IS_PERFORMING_TRICK = %00001000
+
 MOVEMENT_SPEED              = 1
 ANIM_FRAME_CHANGE_TIME      = 8
 
 LEDGE_DISTANCE   = 12
 LEDGE_LENGTH_RANDOM_MASK = 7
 LEDGE_MINIMUM_LENGTH  = 4
+TRAFFIC_CONE_WIDTH          = 8
 
 TOTAL_ANIM_TILES_IDLE       = 6 * 1 ; Not used
 TOTAL_ANIM_TILES_PUSH       = 6 * 3
@@ -84,10 +100,15 @@ ANIM_OFFSET_LAND_FAKIE  = ANIM_OFFSET_LAND_REGULAR + TOTAL_ANIM_TILES_LAND_REGUL
 SCREEN_BOTTOM_Y             = 206   ; 224, 240 PAL
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
+KONAMI_JUMP_FORCE           = -(2 * 256 + 128)
 
 FRICTION                    = -2
 PUSH_FORCE                  = 2 * 256 + 128  ; In subpixels/frame
 BRAKE_FORCE                 = 1 * 256; + 128  ; In subpixels/frame
+
+NUMBER_OF_TRAFFIC_CONES     = 2
+TRAFFIC_CONE_HITBOX_HEIGHT  = 8
+TRAFFIC_CONE_HITBOX_WIDTH   = 8
 
 ;----------------------------------------
 ;;; All get initialised to zero
@@ -102,11 +123,23 @@ animation_frame_timer           .rs 1
 
 ; Consider having all these single bit bools kept in one player_state byte.
 ; Can use AND or CMP >= (or combination) to check is_grounded etc
-; IS_GROUNDED = %00000100
+player_state                    .rs 1
+; 76543210
+; |||||||+-- is animating
+; ||||||+--- is grounded
+; |||||+---- is fakie (riding backwards e.g. after a 180 trick)
+; ||||+----- is mid performing trick
+; |||+------ is grinding ledge
+; ||+-------
+; |+-------- is Konami God mode (jump force increased)
+; +---------
+
 is_animating                    .rs 1
 is_grounded                     .rs 1
 is_fakie                        .rs 1
 is_performing_trick             .rs 1
+is_konami_god_mode              .rs 1
+is_title_screen                 .rs 1
 
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
@@ -122,11 +155,17 @@ scroll_page         .rs 1
 seed                .rs 2
 generate_x          .rs 1   ; which column to generate next
                             ; could be any of 63
-generate_counter    .rs 1
-generate_length_length     .rs 1
+generate_counter                .rs 1
+generate_length_length          .rs 1
+
+konami_code_running_check       .rs 1
+konami_current_press_checked    .rs 1
+
+traffic_cone_obstacle_info      .rs 4 * NUMBER_OF_TRAFFIC_CONES
 
     .rsset $0200
-sprite_player       .rs 4 * 6
+sprite_player                   .rs 4 * 6
+sprite_traffic_cones            .rs 4 * NUMBER_OF_TRAFFIC_CONES
 
     .rsset $0000
 SPRITE_Y            .rs 1
@@ -237,6 +276,67 @@ Player_Move .macro
     BMI .done
     JMP .MoveEachTile_loop
 .done
+    .endm
+;----------------------------------------
+; Konami_CheckForButton .macro
+;     ; @Param \1 Biinary value of button pressed
+;     ; A register already contains joypad1_state value
+;     LDA joypad1_state
+;     CMP \1
+;     BNE .Konami_NotPressed
+;     SEC                                 ; Set the carry flag to #1
+;     ROL A                                ; Bit shift left and set bit 7 as the carry flag value #1
+;     STA konami_code_running_check
+; .Konami_NotPressed:
+;     .endm
+;----------------------------------------
+
+CheckCollisionWithCone .macro  
+; parameters: 
+; \1 object_x
+; \2 object_y,
+; \3 object_hitbox_x
+; \4 object_hitbox_y,
+; \5 object_hitbox_w
+; \6 object_hitbox_h
+; \7 no_collision_label
+
+; If there is a collision, execution continues immediately after this macro
+; Else, jump to no_collision_label
+
+    LDA sprite_traffic_cones + SPRITE_X, x
+    .if \3 > 0
+    SEC
+    SBC \3    ; Adjust for the bullet image position
+                            ; within the sprite, from the sprite's 
+                            ; origin at the top left (x, y)
+    .endif
+    SEC
+    SBC \5 + 1
+    CMP \1
+    BCS \7
+
+    CLC 
+    ADC \5 + 1 + TRAFFIC_CONE_HITBOX_WIDTH 
+            ; Reverses the minus from before and adds 8 again
+            ; Takes advantage of Value already in Accumulator
+    CMP \1
+    BCC \7
+
+    LDA sprite_traffic_cones + SPRITE_Y, x
+    .if \4 > 0
+    SEC
+    SBC \4
+    .endif
+    SEC
+    SBC \6 + 1
+    CMP \2
+    BCS \7
+
+    CLC
+    ADC \6 + 1 + TRAFFIC_CONE_HITBOX_HEIGHT
+    CMP \2
+    BCC \7
     .endm
 ;----------------------------------------
 Animation_SetUp .macro
@@ -484,9 +584,17 @@ ReadB_Done:
 
 ;ReadControls_Done:
 
+    CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #24, #24, #2, #2, NoCollisionWithCone 
+
+    Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
+
+NoCollisionWithCone:
+
     JSR UpdateSpeed
 
     JSR UpdateGravity
+
+    JSR UpdateObstaclePositions
 
     LDA is_animating
     CMP #0
@@ -516,6 +624,44 @@ ReadB_Done:
 ;----------------------------------------
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
 ;----------------------------------------
+NewTitleScreen:
+
+
+;----------------------------------------
+InitialiseTitleScreen:
+
+    ; Reset the PPU high/low latch
+    LDA PPUSTATUS
+
+    ; Write address 3F00 (Background palette) to the PPU
+    LDA #$3F
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDX #0
+.LoadPalette_BackgroundLoop:
+    LDA palettes, X
+    STA PPUDATA
+    INX
+    CPX #4
+    BNE .LoadPalette_BackgroundLoop    
+    
+    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
+    LDA #%00000100
+    STA PPUCTRL ; Have to restore back to previous values later
+    
+.InitialGeneration_LoopX:
+    JSR GenerateTitleScreenColumn
+    LDA generate_x
+    CMP #63
+    BCC .InitialGeneration_LoopX
+    JSR GenerateTitleScreenColumn  ; #63 + 1
+
+   ; CPY 
+
+    RTS
+
 InitialiseGame:
 
     ; Seed the random number generator
@@ -535,12 +681,12 @@ InitialiseGame:
 
     LDX #0
 
-LoadPalette_BackgroundLoop:
+.LoadPalette_BackgroundLoop:
     LDA palettes, X
     STA PPUDATA
     INX
     CPX #4
-    BNE LoadPalette_BackgroundLoop    
+    BNE .LoadPalette_BackgroundLoop    
 
     ; Write address 3F10 (sprite palette) to the PPU next
     LDA #$3F
@@ -549,12 +695,12 @@ LoadPalette_BackgroundLoop:
     STA PPUADDR
     
     LDX #4
-LoadPalette_SpriteLoop:
+.LoadPalette_SpriteLoop:
     LDA palettes, X
     STA PPUDATA
     INX
     CPX #8
-    BNE LoadPalette_SpriteLoop   
+    BNE .LoadPalette_SpriteLoop   
 
     ; Load the player sprite
     LDX #0
@@ -565,6 +711,8 @@ LoadPalette_SpriteLoop:
     CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
     BNE .LoadSprite_Next
 
+    JSR LoadNewTrafficCone
+
     ; Load attribute data that each 16 x 16 uses
     LDA #$23        ; Write address $23C0 to PPUADDR register
     STA PPUADDR     ; PPUADDR is big endian for some reason??
@@ -573,10 +721,10 @@ LoadPalette_SpriteLoop:
 
     LDA #%00000000  ; set all to first colour palette
     LDX #64
-LoadAttributes_Loop:
+.LoadAttributes_Loop:
     STA PPUDATA
     DEX
-    BNE LoadAttributes_Loop
+    BNE .LoadAttributes_Loop
 
     ; Load attribute data
     LDA #$27
@@ -586,23 +734,167 @@ LoadAttributes_Loop:
 
     LDA #%00000000
     LDX #64
-LoadAttributes2_Loop:
+.LoadAttributes2_Loop:
     STA PPUDATA
     DEX
-    BNE LoadAttributes2_Loop
+    BNE .LoadAttributes2_Loop
 
     LDA #1
     STA is_grounded
     
      ; Generate initial level
-InitialGeneration_Loop:
+.InitialGeneration_Loop:
     JSR GenerateColumn
     LDA generate_x
     CMP #63
-    BCC InitialGeneration_Loop
+    BCC .InitialGeneration_Loop
     JSR GenerateColumn  ; #63 + 1
 
     RTS ; End subroutine (returns back to the point it was called)
+;----------------------------------------
+; CheckKonamiCode:
+;     LDA joypad1_state                   ; If no button presed then set bool as false
+;     CMP #0
+;     BEQ Konami_NoKeyPressed
+;     LDA konami_code_running_check       ; Check for winstate first
+;     CMP #KONAMI_CHECK_STEP_9
+;     BEQ Konami_CheckForBAStart
+;     LDA konami_current_press_checked    ; If current press checked then skip
+;     CMP #1
+;     BEQ Konami_End
+;     LDA #1                              ; Else check current press, Set the skip bool
+;     STA konami_current_press_checked
+    
+; ; Konami_CheckForButton .macro
+; ;     ; @Param \1 Biinary value of button pressed
+; ;     ; A register already contains joypad1_state value
+; ;     LDA joypad1_state
+; ;     CMP \1
+; ;     BNE .Konami_NotPressed
+; ;     LDA konami_code_running_check
+; ;     SEC                                 ; Set the carry flag to #1
+; ;     ROL A                                ; Bit shift left and set bit 7 as the carry flag value #1
+; ;     STA konami_code_running_check
+; ; .Konami_NotPressed:
+; ;     .endm
+
+;     LDA konami_code_running_check
+;     CLC
+    
+;     CMP #KONAMI_CHECK_STEP_1                   ; Else Check each code in turn
+;     BNE Konami_CheckStep2
+;     LDA joypad1_state
+;     CMP #BUTTON_UP
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC                                 ; Set the carry flag to #1
+;     ROL A                                ; Bit shift left and set bit 7 as the carry flag value #1
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep2:
+;     CMP #KONAMI_CHECK_STEP_2
+;     BNE Konami_CheckStep3
+;     LDA joypad1_state
+;     CMP #BUTTON_UP
+;     ;BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep3:
+;     CMP #KONAMI_CHECK_STEP_3
+;     BNE Konami_CheckStep4
+;     LDA joypad1_state
+;     CMP #BUTTON_DOWN
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep4:
+;     CMP #KONAMI_CHECK_STEP_4
+;     BNE Konami_CheckStep5
+;     LDA joypad1_state
+;     CMP #BUTTON_DOWN
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep5:
+;     CMP #KONAMI_CHECK_STEP_5
+;     BNE Konami_CheckStep6
+;     LDA joypad1_state
+;     CMP #BUTTON_LEFT
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep6:
+;     CMP #KONAMI_CHECK_STEP_6
+;     BNE Konami_CheckStep7
+;     LDA joypad1_state
+;     CMP #BUTTON_RIGHT
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep7:
+;     CMP #KONAMI_CHECK_STEP_7
+;     BNE Konami_CheckStep8
+;     LDA joypad1_state
+;     CMP #BUTTON_LEFT
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+; Konami_CheckStep8:
+;     CMP #KONAMI_CHECK_STEP_8
+;     BNE Konami_WrongKeyPressed
+;     LDA joypad1_state
+;     CMP #BUTTON_RIGHT
+;     BNE Konami_WrongKeyPressed
+;     LDA konami_code_running_check
+;     SEC  
+;     ROL A
+;     STX konami_code_running_check
+;     JMP Konami_End
+;     ; Else correct key not pressed so zero out the running check
+; Konami_WrongKeyPressed:
+;     LDA #0
+;     STA konami_code_running_check
+;     RTS
+; Konami_NoKeyPressed:
+;     LDA #0
+;     STA konami_current_press_checked
+;     RTS
+; Konami_DoCheat:
+;     ; Play a sound maybe?
+;     ; Do some cheat effect
+;     LDA #1
+;     STA is_konami_god_mode              ; Need to implement this
+; Konami_End:
+;     RTS
+; Konami_CheckForBAStart:
+;     LDA joypad1_state                   ; Check for full winstate first
+;     CMP #%11010000
+;     BEQ Konami_DoCheat
+;     CMP BUTTON_B                        ; If one of the final combo is pressed then ignore and end
+;     BEQ Konami_End
+;     CMP BUTTON_A
+;     BEQ Konami_End
+;     CMP BUTTON_START
+;     BEQ Konami_End
+;     JMP Konami_WrongKeyPressed
 ;----------------------------------------
 LoadNextPlayerSprite:
 ; Just change the tile data
@@ -645,6 +937,36 @@ UpdateAnimation:
     INX
     STX animation_frame_timer
 .SkipIncrement:
+    RTS
+;----------------------------------------
+LoadNewTrafficCone:
+    LDX #0
+.NewCone_Loop:
+    LDA obstacle_offscreen_traffic_cone_info, X
+    STA sprite_traffic_cones, X
+    INX
+    CPX #4
+    BNE .NewCone_Loop
+    RTS
+;----------------------------------------
+UpdateObstaclePositions:
+    LDX #3
+    LDY #1
+.Update_Loop:
+    LDA sprite_traffic_cones, X
+    SEC
+    SBC delta_X
+    STA sprite_traffic_cones, X
+    CLC
+    CPY #NUMBER_OF_TRAFFIC_CONES
+    BCC .Update_End
+    INX
+    INX
+    INX
+    INX
+    INY
+    JMP .Update_Loop
+.Update_End:
     RTS
 ;----------------------------------------
 UpdateSpeed:
@@ -760,6 +1082,10 @@ prng_2:
 	STA seed+0
 	CMP #0     ; reload flags
 	RTS
+;----------------------------------------
+GenerateTitleScreenColumn:
+
+    RTS
 ;----------------------------------------
 GenerateColumn:
     ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
@@ -889,7 +1215,7 @@ animations:
     .db $04, $05, $14, $15, $44, $45
     .db $04, $05, $14, $15, $54, $55
     .db $04, $05, $14, $15, $24, $25
-    ; BSideflip_1:
+    ; BSideflip:
     .db $06, $07, $16, $17, $36, $37
     .db $08, $09, $18, $19, $46, $47
     .db $0A, $0B, $1A, $1B, $56, $57
@@ -936,6 +1262,11 @@ animations:
     .db $30, $31, $40, $41, $50, $51
     .db $32, $33, $42, $43, $52, $53
     .db $00, $01, $10, $11, $20, $21
+;----------------------------------------
+obstacle_offscreen_traffic_cone_info:
+    .db $C7, $F1, $00, $00
+obstacle_offscreen_ledge_info:
+    .db $C7, $F0, $00, $00
 ;----------------------------------------
 sprites:    ; y,  tile,  attrib, x
     ; Player idle
