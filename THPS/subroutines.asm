@@ -3,6 +3,27 @@
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
 ;----------------------------------------
 
+CheckControls:
+;Controls
+    ; Initialise controller 1
+    LDA #1
+    STA JOYPAD1
+    LDA #0
+    STA JOYPAD1
+    LDX #0
+    STX joypad1_state   ; set to 0
+
+.ReadController:
+    ;a(d key) b(f key) select start up down left right
+    LDA JOYPAD1
+    LSR A
+    ROL joypad1_state
+    INX                     ; Increment count
+    CPX #8                  ; Compare X to 8
+    BNE .ReadController      ; If not equal, return to function start
+
+    RTS
+
 ;----------------------------------------
 LoadNewTrafficCone:
     LDX #0
@@ -97,23 +118,23 @@ UpdatePlayer_Grounded:
     STA player_downward_speed
     STA player_downward_speed+1
     LDA is_grounded
-    CMP #0
+    CMP #FALSE
     BEQ UpdatePlayer_SetGroundedAnim
     RTS
 UpdatePlayer_SetGroundedAnim:
-    LDA #1
+    LDA #TRUE
     STA is_grounded
     ; Set land anim between regular, fakie, or fall
     LDA is_performing_trick
-    CMP #1
+    CMP #TRUE
     BEQ .UpdatePlayer_SetFallAnim
     LDA is_fakie
-    CMP #1
+    CMP #TRUE
     BEQ .UpdatePlayer_SetFakieLandAnim
     Animation_SetUp #ANIM_OFFSET_LAND_REGULAR, #TOTAL_ANIM_TILES_LAND_REGULAR
     RTS
 .UpdatePlayer_SetFakieLandAnim:   
-    LDA #0
+    LDA #FALSE
     STA is_fakie
     Animation_SetUp #ANIM_OFFSET_LAND_FAKIE, #TOTAL_ANIM_TILES_LAND_FAKIE
     RTS
@@ -148,104 +169,37 @@ prng_2:
 	CMP #0     ; reload flags
 	RTS
 ;----------------------------------------
-GenerateTitleScreenColumn:
-
-    RTS
-;----------------------------------------
-GenerateColumn:
-    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
+GenerateGameBackgroundColumn:
+    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1 ; Also set the nametable?
     LDA #%00000100
     STA PPUCTRL ; Have to restore back to previous values later
 
-    ; find most significant byte of PPU address
-    ; See video 8, 6:10 for the explanation of which bit to look at
+    LDA current_nametable_generating
+    STA PPUADDR
     LDA generate_x
-    AND #32     ; The halfway point of 63 potential columns spread over two pages
-                ; Accumulator = 0 for nametable $2000, 32 for nametable $2400
-
-    LSR A
-    LSR A       ; Bitshift right == divide by 2
-    LSR A       ; so  3 times == divide by 8. So accumulator = 0 or 4
-    ; No need to CLC as bitshift will have shifted a #0 into it
-    ADC #$20    ; A now = $20 or $24
     STA PPUADDR
 
-    ; Find least significant byte of PPU address
-    LDA generate_x
-    AND #31     ; Gets the 0-32 ... video 8 10:30 ??
-    STA PPUADDR
-
-    ; Write the data
-    LDA generate_counter
-    BNE GenerateColumn_Ledge
-    ; Set up new pipe
-    JSR prng
-    AND #LEDGE_LENGTH_RANDOM_MASK ; wipe out values over, get a value upto 8
-    CLC
-    ADC #LEDGE_MINIMUM_LENGTH ; gives a value between 4 and 12
-    STA generate_length_length
-    LDA generate_counter    ; load this back in
-
-;-------
-
-GenerateColumn_Ledge:
-    ; pipe is 4 tiles wide so do empty if more than 4
-    CMP #4  
-    BCS GenerateColumn_Empty
-
-;-------
-
-;     ; Else, generate ledge
-;     LDX #25     ; 30 rows
-;     LDA #$F2    ; Location of an empty tile in the sprite sheet
-; .GenerateEmpty:
-;     STA PPUDATA
-;     DEX
-;     BNE .GenerateEmpty
-;     LDX #5
-;     LDA #$F0
-; .GenerateLedge:
-;     STA PPUDATA
-;     DEX
-;     BNE .GenerateLedge
-
-;-------
-
-GenerateColumn_Empty:
-    LDX #26     ; 30 rows
-    LDA #$E3    ; Location of an wall tile in the sprite sheet
-.GenerateEmpty:
+    LDX #26     ; 30 rows = 26 empty + 1 floor + 3 bricks underground
+    LDA #$E0    ; Location of an empty tile in the sprite sheet
+.GenerateEmptyTile:
     STA PPUDATA
     DEX
-    BNE .GenerateEmpty
+    BNE .GenerateEmptyTile
     LDA #$F0    ; Floor
     STA PPUDATA
     LDX #3
     LDA #$F2    ; Underground
-.GenerateLedge:
+    CLC
+.GenerateBricks:
     STA PPUDATA
     DEX
-    BNE .GenerateLedge
+    BNE .GenerateBricks
 
-;-------
+    INC generate_x
 
-GenerateColumn_End:
-    ; Increment generate_x
-    LDA generate_x
-    CLC
-    ADC #1
-    AND #63     ; Wrap back to zero at 64
-                ; && comparing will remove binary byte for 64 upwards
-                ; video 8 14:30
-    STA generate_x
-    
-    ; Increment generate_counter
-    LDA generate_counter
-    CLC
-    ADC #1
-    CMP #LEDGE_DISTANCE
-    BCC GenerateColumn_NoCounterWrap
     LDA #0
-GenerateColumn_NoCounterWrap:
-    STA generate_counter
+    STA PPUSCROLL
+    STA PPUSCROLL
+    LDA #%00000000
+    STA PPUCTRL
     RTS

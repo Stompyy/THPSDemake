@@ -1,19 +1,108 @@
 NMI:        ; Non maskable interrupt
 
-    LDA is_title_screen
-    CMP #1
-    BNE PlayGame
+    JSR CheckControls
+
+    LDA gameStateMachine
+    CMP #GAMESTATE_PLAY
+    BNE .InMenus
+    JMP PlayGame
+.InMenus:
+    CMP #GAMESTATE_CONTROLS
+    BEQ NMI_ShowControlScreen
+
+    CMP #GAMESTATE_PREGAME
+    BEQ NMI_PreGame
+
+    ; Else continue to show title screen that was loaded in on initialisation
+
+; In Title screen controls
+    ; React to Start button
+    LDA joypad1_state
+    AND #BUTTON_START
+    BEQ NMI_ShowTitleScreen
+
+    ; One time init of the game background generator
+    LDA #0
+    STA generate_x
+    STA title_screen_load_counter
+    LDA #$20
+    STA current_nametable_generating
+    LDA #GAMESTATE_CONTROLS
+    STA gameStateMachine
+
+; Check if new column needs to be generated before allowing controls to exit
+NMI_ShowControlScreen:
+    LDX title_screen_load_counter
+    CPX #32
+    BEQ .CheckForControls
+
+    INX
+    STX title_screen_load_counter
+    JSR GenerateGameBackgroundColumn
+    JMP NMI_ShowControlsPage
+
+.CheckForControls:
+    LDA joypad1_state
+    AND #BUTTON_START
+    BEQ NMI_ShowControlsPage
+    LDA #$24                            ; Set the second nametable to load in
+    STA current_nametable_generating
+    LDA #0
+    STA generate_x
+    STA title_screen_load_counter
+    LDA #GAMESTATE_PREGAME
+    STA gameStateMachine
+    JMP NMI_PreGame
+
+NMI_ShowControlsPage:
+    LDA #0
+    STA PPUSCROLL
+    STA PPUSCROLL
+    LDA #%10000001
+    STA PPUCTRL
+    RTI     ; Return from interrupt
+
+NMI_ShowTitleScreen:
 
     ; Set PPUCTRL register
-    LDA scroll_page
-    ORA #%10010000
+ ;   LDA scroll_page
+ ;   ORA #%10010000
+    LDA #0
+    STA PPUSCROLL
+    STA PPUSCROLL
+    LDA #%10010000
     STA PPUCTRL
-
     RTI     ; Return from interrupt
+
+NMI_PreGame:
+
+    LDX title_screen_load_counter
+    CPX #32
+    BEQ StartGame
+    
+    INX
+    STX title_screen_load_counter
+    JSR GenerateGameBackgroundColumn
+
+    ; ; Copy sprite data to the PPU
+    ; LDA #0
+    ; STA OAMADDR
+    ; LDA #$02    ; Location of the sprite? In memory
+    ; STA OAMDMA
+
+    LDA #0
+    STA PPUSCROLL
+    STA PPUSCROLL
+
+    LDA #%10000000
+    STA PPUCTRL
+    RTI     ; Return from interrupt
+
+StartGame:
+    LDA #GAMESTATE_PLAY
+    STA gameStateMachine
     
 PlayGame:
-; TempShould only do this next part once!!!
-    JSR DrawGameBackground
 
 ; Scroll - Do this first as heavy, to avoid potential flickering as screen iss already being rendered at end
     LDA scroll_x
@@ -43,37 +132,19 @@ Scroll_NoWrap:
     ;JSR GenerateColumn
 Scroll_NoGenerate:
 
-;Controls
-    ; Initialise controller 1
-    LDA #1
-    STA JOYPAD1
-    LDA #0
-    STA JOYPAD1
-    LDX #0
-    STX joypad1_state   ; set to 0
-
-ReadController:
-    ;a(d key) b(f key) select start up down left right
-    LDA JOYPAD1
-    LSR A
-    ROL joypad1_state
-    INX                     ; Increment count
-    CPX #8                  ; Compare X to 8
-    BNE ReadController      ; If not equal, return to function start
-
     ; React to Left button
     LDA joypad1_state
     AND #BUTTON_LEFT
     BEQ ReadLeft_Done
     LDA is_animating        ; If already animating skip to the end
-    CMP #1
+    CMP #TRUE
     BEQ ReadLeft_Done
     LDA is_grounded
-    CMP #1
+    CMP #TRUE
     BEQ .DoTrick_Brake
     ; Else do BSFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_BSFLIP, #TOTAL_ANIM_TILES_BSFLIP
-    LDA #1
+    LDA #TRUE
     STA is_performing_trick
     STA is_fakie    ; To tell the landing animation which anim to use
     JMP ReadLeft_Done
@@ -90,14 +161,14 @@ ReadLeft_Done:
     AND #BUTTON_RIGHT
     BEQ ReadRight_Done
     LDA is_animating
-    CMP #1
+    CMP #TRUE
     BEQ ReadRight_Done
     LDA is_grounded
-    CMP #1
+    CMP #TRUE
     BEQ .DoTrick_Push
     ; Else do KICKFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
-    LDA #1
+    LDA #TRUE
     STA is_performing_trick
     JMP ReadRight_Done
 .DoTrick_Push:
@@ -113,14 +184,14 @@ ReadRight_Done:
     AND #BUTTON_UP
     BEQ ReadUp_Done
     LDA is_animating
-    CMP #1
+    CMP #TRUE
     BEQ ReadUp_Done
     LDA is_grounded
-    CMP #1
+    CMP #TRUE
     BEQ .DoTrick_NoseManual
     ; Else do POPSHUV if !is_grounded
     Animation_SetUp #ANIM_OFFSET_POPSHUV, #TOTAL_ANIM_TILES_POPSHUV
-    LDA #1
+    LDA #TRUE
     STA is_performing_trick
     JMP ReadUp_Done
 .DoTrick_NoseManual:
@@ -132,14 +203,14 @@ ReadUp_Done:
     AND #BUTTON_DOWN
     BEQ ReadDown_Done
     LDA is_animating
-    CMP #1
+    CMP #TRUE
     BEQ ReadDown_Done
     LDA is_grounded
-    CMP #1
+    CMP #TRUE
     BEQ .DoTrick_Manual
     ; Else do TREFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_TREFLIP, #TOTAL_ANIM_TILES_TREFLIP
-    LDA #1
+    LDA #TRUE
     STA is_performing_trick
     JMP ReadDown_Done
 .DoTrick_Manual:
@@ -151,10 +222,10 @@ ReadDown_Done:
     AND #BUTTON_A
     BEQ ReadA_Done
     LDA is_animating
-    CMP #1
+    CMP #TRUE
     BEQ ReadA_Done
     LDA is_grounded
-    CMP #0
+    CMP #FALSE
     BEQ .DoTrick_BS180
     ; Set up the OLLIE animation
     Animation_SetUp #ANIM_OFFSET_OLLIE, #TOTAL_ANIM_TILES_OLLIE
@@ -166,12 +237,12 @@ ReadDown_Done:
     ; Move off the ground to allow forces
     Player_Move SPRITE_Y, #-2   ; 2 is enough to disengage from is_grounded check, 1 is immediately discounted by gravity
     ; Change bool
-    LDA #0
+    LDA #FALSE
     STA is_grounded
     JMP ReadA_Done
 .DoTrick_BS180:
     Animation_SetUp #ANIM_OFFSET_BS180, #TOTAL_ANIM_TILES_BS180
-    LDA #1
+    LDA #TRUE
     ;STA is_performing_trick ; disable to let player slide the trick around in last second without falling
     STA is_fakie    ; To tell the landing animation which anim to use
 ReadA_Done:
@@ -181,10 +252,10 @@ ReadA_Done:
     AND #BUTTON_B
     BEQ ReadB_Done
     LDA is_animating
-    CMP #1
+    CMP #TRUE
     BEQ ReadB_Done
     LDA is_grounded
-    CMP #0
+    CMP #FALSE
     BEQ ReadB_Done
     ; Set up the NOLLIE animation
     Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
@@ -196,7 +267,7 @@ ReadA_Done:
     ; Move off the ground to allow forces
     Player_Move SPRITE_Y, #-2
     ; Change bool
-    LDA #0
+    LDA #FALSE
     STA is_grounded
 ReadB_Done:
 
@@ -215,18 +286,18 @@ NoCollisionWithCone:
     JSR UpdateObstaclePositions
 
     LDA is_animating
-    CMP #0
+    CMP #FALSE
     BEQ .SkipAnimUpdate
     JSR UpdateAnimation
 .SkipAnimUpdate
 
     LDA is_grounded
-    CMP #1
+    CMP #TRUE
     BNE .SkipPlayerForceGroundedPosition
     Player_Set_Position #SCREEN_BOTTOM_Y    ; Have to force the Y pos sometimes? gravity stuff
-.SkipPlayerForceGroundedPosition    
+.SkipPlayerForceGroundedPosition:    
 
-SkipThis:
+NMI_End:
 
     ; Copy sprite data to the PPU
     LDA #0

@@ -35,6 +35,9 @@ IS_GROUNDED         = %00000010
 IS_FAKIE            = %00000100
 IS_PERFORMING_TRICK = %00001000
 
+TRUE                = 1
+FALSE               = 0
+
 MOVEMENT_SPEED              = 1
 ANIM_FRAME_CHANGE_TIME      = 8
 
@@ -55,6 +58,11 @@ BRAKE_FORCE                 = 1 * 256; + 128  ; In subpixels/frame
 NUMBER_OF_TRAFFIC_CONES     = 2
 TRAFFIC_CONE_HITBOX_HEIGHT  = 8
 TRAFFIC_CONE_HITBOX_WIDTH   = 8
+
+GAMESTATE_TITLE             = 0
+GAMESTATE_CONTROLS          = 1
+GAMESTATE_PREGAME           = 2
+GAMESTATE_PLAY              = 3
 
 ;----------------------------------------
 ;;; All get initialised to zero
@@ -86,6 +94,9 @@ is_fakie                        .rs 1
 is_performing_trick             .rs 1
 is_konami_god_mode              .rs 1
 is_title_screen                 .rs 1
+gameStateMachine                .rs 1   ; 0 is title screen
+                                        ; 1 is controls screen
+                                        ; 2 is playing game
 
 player_downward_speed           .rs 2   ; In subpixel per frame - 16 bits
 player_position_sub             .rs 1   ; in subpixels
@@ -110,6 +121,10 @@ title_screen_load_current_Y     .rs 1
 
 konami_code_running_check       .rs 1
 konami_current_press_checked    .rs 1
+
+generate_game_background_row_counter .rs 1
+should_generate_game_background .rs 1
+current_nametable_generating    .rs 1
 
 traffic_cone_obstacle_info      .rs 4 * NUMBER_OF_TRAFFIC_CONES
 

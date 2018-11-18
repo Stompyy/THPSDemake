@@ -1,37 +1,3 @@
-InitialiseTitleScreen:
-
-    ; Reset the PPU high/low latch
-    LDA PPUSTATUS
-
-    ; Write address 3F00 (Background palette) to the PPU
-    LDA #$3F
-    STA PPUADDR
-    LDA #$00
-    STA PPUADDR
-
-    LDX #0
-.LoadPalette_BackgroundLoop:
-    LDA palettes, X
-    STA PPUDATA
-    INX
-    CPX #4
-    BNE .LoadPalette_BackgroundLoop    
-    
-    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
-    LDA #%00000100
-    STA PPUCTRL ; Have to restore back to previous values later
-    
-.InitialGeneration_LoopX:
-    JSR GenerateTitleScreenColumn
-    LDA generate_x
-    CMP #63
-    BCC .InitialGeneration_LoopX
-    JSR GenerateTitleScreenColumn  ; #63 + 1
-
-   ; CPY 
-
-    RTS
-;----------------------------------------
 
 InitialiseGame:
 
@@ -50,18 +16,13 @@ InitialiseGame:
     LDA #$00
     STA PPUADDR
 
-
-
-
-
-
-    LDX #0
+    LDX #4      ; Temp moved to blue palette
 
 .LoadPalette_BackgroundLoop:
     LDA palettes, X
     STA PPUDATA
     INX
-    CPX #4
+    CPX #8
     BNE .LoadPalette_BackgroundLoop    
 
 
@@ -99,7 +60,7 @@ InitialiseGame:
     LDA #$C0
     STA PPUADDR
 
-    LDA #%00000000  ; set all to first colour palette
+    LDA #%00000000  ; set all (attribute table?) to first colour palette
     LDX #64
 .LoadAttributes_Loop:
     STA PPUDATA
@@ -119,12 +80,11 @@ InitialiseGame:
     DEX
     BNE .LoadAttributes2_Loop
 
-    LDA #1
+    ; Set the true bools
+    LDA #TRUE
     STA is_grounded
     STA is_title_screen
-
-    
-  ;  JSR DrawGameBackground
+    STA should_generate_game_background
 
     JSR NewTitleScreenTime
 
@@ -132,21 +92,13 @@ InitialiseGame:
 
 
 
-DrawGameBackground:    
-     ; Generate initial level
-.InitialGeneration_Loop:
-    JSR GenerateColumn
-    LDA generate_x
-    CMP #63
-    BCC .InitialGeneration_Loop
-    JSR GenerateColumn  ; #63 + 1
-
-
-
-
    
 background_skip:    
-
+    
+    ; Initalise state machine to the title screen
+    LDA #GAMESTATE_TITLE
+    STA gameStateMachine
+    
 
     LDA #%10000000  ; Enable NMI
     STA PPUCTRL
@@ -159,3 +111,73 @@ background_skip:
     STA PPUSCROLL   ; Set y scroll
 
     RTS ; End subroutine (returns back to the point it was called)
+
+
+LoadInGameBackground:
+
+    ; Disable NMI to load in full game background
+  ;  LDA #%000000000
+  ;  STA PPUCTRL
+
+    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
+  ;  LDA #%00000100
+  ;  STA PPUCTRL ; Have to restore back to previous values later
+
+    ; Reset the PPU high/low latch
+    LDA PPUSTATUS
+
+    ; Set PPUADDR for 1st nametable
+    LDA #$20
+    STA PPUADDR
+    LDA #$00
+    STA PPUADDR
+
+    LDA #0
+    STA generate_game_background_row_counter
+
+NextBGRow:
+    ; Check if should load empty or floor
+    LDA generate_game_background_row_counter
+    CMP #4
+    BEQ LoadFloorRow
+
+    ; Load empty
+    LDX #0
+    LDA #$E0
+LoadEmptyRow:
+    STA PPUDATA
+    INX
+    CPX #20
+    BNE LoadEmptyRow
+    LDX generate_game_background_row_counter
+    INX
+    STX generate_game_background_row_counter
+    JMP NextBGRow
+
+    ; Load floor
+LoadFloorRow:
+    LDX #0
+    LDA #$F0
+.LoadFloorRow_Loop:
+    STA PPUDATA
+    INX
+    CPX #32
+    BNE .LoadFloorRow_Loop
+    LDX generate_game_background_row_counter
+    INX
+    CPX #20
+    BEQ StopGenerating
+    STX generate_game_background_row_counter
+    JMP LoadFloorRow
+
+StopGenerating:
+    LDA #FALSE
+    STA should_generate_game_background
+  ;  LDA #%1000000
+  ;  STA PPUCTRL
+    ;RTS
+    JMP NMI_ShowControlScreen
+
+vertStrip:
+    .db $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $F0, $F0, $F0, $F0, $F0
+
