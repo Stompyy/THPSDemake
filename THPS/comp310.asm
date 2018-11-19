@@ -61,10 +61,10 @@ clrmem:
 
     ; We skipped $200, x on purpose. Usually RAM page 2 is used for the
     ; display list to be copied to OAM. OAM needs to be initialised to
-    ; $EF-$FF, not 0, or you'll get a bunch of garbage sprites at (0, 0).
+    ; $EF-$FF, not 0, or you'll get a bunch of garbage playerSprites at (0, 0).
 
     LDA #$FF
-    STA $200, x     ; Reserved for the sprites
+    STA $200, x     ; Reserved for the playerSprites
 
     INX
     BNE clrmem
@@ -85,22 +85,30 @@ Forever:
 
 ;----------------------------------------
 palettes:
+    .db $30, $0F, $27, $2C  ; Player sprite / Title screens
     .db $30, $3D, $2D, $37  ; Background
-    .db $30, $0F, $27, $2C  ; Player sprite
+    .db $0F, $30, $30, $30  ; White
 ;----------------------------------------
 obstacle_offscreen_traffic_cone_info:
     .db $C7, $F1, $00, $00
 obstacle_offscreen_ledge_info:
     .db $C7, $F0, $00, $00
 ;----------------------------------------
-sprites:    ; y,  tile,  attrib, x
+playerSpritesDB:    ; y,  tile,  attrib, x
     ; Player idle
-    .db $80, $00, $00, $20
-    .db $80, $01, $00, $28
-    .db $88, $10, $00, $20
-    .db $88, $11, $00, $28
-    .db $90, $20, $00, $20
-    .db $90, $21, $00, $28
+    .db $00, $5A, $00, $20 ; old y = $80 ; newer but wrong = CE
+    .db $00, $01, $00, $28 ; old y = $80 ; newer but wrong = CE
+    .db $00, $10, $00, $20 ; old y = $88 ; newer but wrong = D6
+    .db $00, $11, $00, $28 ; old y = $88 ; newer but wrong = D6
+    .db $00, $20, $00, $20 ; old y = $90 ; newer but wrong = EE
+    .db $00, $21, $00, $28 ; old y = $90 ; newer but wrong = EE
+whiteBlankBoxDB:
+; Blocks the 'press start' message on the title screen to make it flash
+    .db $5A, $38, $02, $70
+    .db $5A, $38, $02, $78
+    .db $5A, $38, $02, $80
+    .db $5A, $38, $02, $88
+    .db $5A, $38, $02, $90
 ;----------------------------------------
     .bank 1
     .org $FFFA      ; First of the three vectors starts here

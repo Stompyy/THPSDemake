@@ -1,4 +1,3 @@
-
 ;----------------------------------------
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
 ;----------------------------------------
@@ -180,7 +179,7 @@ GenerateGameBackgroundColumn:
     STA PPUADDR
 
     LDX #26     ; 30 rows = 26 empty + 1 floor + 3 bricks underground
-    LDA #$E0    ; Location of an empty tile in the sprite sheet
+    LDA #$00    ; Location of an empty tile in the sprite sheet
 .GenerateEmptyTile:
     STA PPUDATA
     DEX
@@ -203,3 +202,31 @@ GenerateGameBackgroundColumn:
     LDA #%00000000
     STA PPUCTRL
     RTS
+;----------------------------------------
+Title_FlashMessage:
+    LDX title_screen_flash_timer
+    INX
+    CPX #10; ANIM_FRAME_CHANGE_TIME*2  ; reuse the variable
+    BEQ .ChangeVisability
+    STX title_screen_flash_timer
+    RTS
+.ChangeVisability:
+    LDX #22
+.ChangeNextTile:
+    LDA sprite_text_blanking_box_white, X
+    EOR #%00100000
+    STA sprite_text_blanking_box_white, X
+    DEX
+    DEX
+    DEX
+    DEX
+    BPL .ChangeNextTile
+    LDX #0
+    STX title_screen_flash_timer    ; reset the timer
+    ; Draw the sprites
+    LDA #0
+    STA OAMADDR
+    LDA #$02
+    STA OAMDMA
+    RTS
+;----------------------------------------

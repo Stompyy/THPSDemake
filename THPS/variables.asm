@@ -126,11 +126,14 @@ generate_game_background_row_counter .rs 1
 should_generate_game_background .rs 1
 current_nametable_generating    .rs 1
 
+title_screen_flash_timer              .rs 1
+
 traffic_cone_obstacle_info      .rs 4 * NUMBER_OF_TRAFFIC_CONES
 
     .rsset $0200
 sprite_player                   .rs 4 * 6
 sprite_traffic_cones            .rs 4 * NUMBER_OF_TRAFFIC_CONES
+sprite_text_blanking_box_white  .rs 4 * 5
 
     .rsset $0000
 SPRITE_Y            .rs 1

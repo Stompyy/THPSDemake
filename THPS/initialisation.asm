@@ -1,6 +1,12 @@
 
 InitialiseGame:
 
+    ; Clear out the sprite data if returning from a reset
+    LDA #0
+    STA OAMADDR
+    LDA #$0
+    STA OAMDMA
+
     ; Seed the random number generator
     LDA #$12    ; Arbitary 1234 (non zero value)
     STA seed
@@ -16,13 +22,13 @@ InitialiseGame:
     LDA #$00
     STA PPUADDR
 
-    LDX #4      ; Temp moved to blue palette
+    LDX #0      ; Temp moved to blue palette
 
 .LoadPalette_BackgroundLoop:
     LDA palettes, X
     STA PPUDATA
     INX
-    CPX #8
+    CPX #12
     BNE .LoadPalette_BackgroundLoop    
 
 
@@ -35,22 +41,37 @@ InitialiseGame:
     LDA #$10
     STA PPUADDR
     
-    LDX #4
+    LDX #0
 .LoadPalette_SpriteLoop:
     LDA palettes, X
     STA PPUDATA
     INX
-    CPX #8
+    CPX #12
     BNE .LoadPalette_SpriteLoop   
 
-    ; Load the player sprite
+;     ; Load the player sprite
+;     LDX #0
+; .LoadPlayerSprite_Next:
+;     LDA playerSpritesDB, X
+;     STA sprite_player, X
+;     INX
+;     CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
+;     BNE .LoadPlayerSprite_Next
+
+    ; Load in the text blanking white rect that is used to make text flash
     LDX #0
-.LoadSprite_Next:
-    LDA sprites, X
-    STA sprite_player, X
+.LoadBlankSprite_Next:
+    LDA whiteBlankBoxDB, X
+    STA sprite_text_blanking_box_white, X
     INX
-    CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
-    BNE .LoadSprite_Next
+    CPX #20
+    BNE .LoadBlankSprite_Next
+
+    ; Copy sprite data to the PPU
+    LDA #0
+    STA OAMADDR
+    LDA #$02    ; Location of the sprite? In memory
+    STA OAMDMA
 
     JSR LoadNewTrafficCone
 
@@ -112,29 +133,6 @@ background_skip:
 
     RTS ; End subroutine (returns back to the point it was called)
 
-
-LoadInGameBackground:
-
-    ; Disable NMI to load in full game background
-  ;  LDA #%000000000
-  ;  STA PPUCTRL
-
-    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1
-  ;  LDA #%00000100
-  ;  STA PPUCTRL ; Have to restore back to previous values later
-
-    ; Reset the PPU high/low latch
-    LDA PPUSTATUS
-
-    ; Set PPUADDR for 1st nametable
-    LDA #$20
-    STA PPUADDR
-    LDA #$00
-    STA PPUADDR
-
-    LDA #0
-    STA generate_game_background_row_counter
-
 NextBGRow:
     ; Check if should load empty or floor
     LDA generate_game_background_row_counter
@@ -176,8 +174,4 @@ StopGenerating:
   ;  LDA #%1000000
   ;  STA PPUCTRL
     ;RTS
-    JMP NMI_ShowControlScreen
-
-vertStrip:
-    .db $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $F0, $F0, $F0, $F0, $F0
-
+    JMP NMI_ShowTitleScreen

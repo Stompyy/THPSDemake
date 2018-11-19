@@ -4,22 +4,26 @@ NMI:        ; Non maskable interrupt
 
     LDA gameStateMachine
     CMP #GAMESTATE_PLAY
-    BNE .InMenus
+    BNE .InMenus1
     JMP PlayGame
-.InMenus:
+.InMenus1:
     CMP #GAMESTATE_CONTROLS
-    BEQ NMI_ShowControlScreen
-
+    BNE .InMenus2
+    JMP NMI_ShowControlScreen
+.InMenus2:
     CMP #GAMESTATE_PREGAME
-    BEQ NMI_PreGame
-
+    BNE .InMenus3
+    JMP NMI_PreGame
+.InMenus3:
     ; Else continue to show title screen that was loaded in on initialisation
 
 ; In Title screen controls
-    ; React to Start button
+    ; React to A or B button
     LDA joypad1_state
     AND #BUTTON_START
-    BEQ NMI_ShowTitleScreen
+    BNE .InitControlScreen
+    JMP NMI_ShowTitleScreen
+.InitControlScreen:
 
     ; One time init of the game background generator
     LDA #0
@@ -36,14 +40,33 @@ NMI_ShowControlScreen:
     CPX #32
     BEQ .CheckForControls
 
+
     INX
     STX title_screen_load_counter
     JSR GenerateGameBackgroundColumn
     JMP NMI_ShowControlsPage
 
+; .LoadInPlayerSprite:
+;     ; Load the player sprite
+;     LDX #0
+; .LoadPlayerSprite_Next:
+;     LDA playerSpritesDB, X
+;     STA sprite_player, X
+;     INX
+;     CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
+;     BNE .LoadPlayerSprite_Next  
+
+;     ; Copy sprite data to the PPU
+;     LDA #0
+;     STA OAMADDR
+;     LDA #$02    ; Location of the sprite? In memory
+;     STA OAMDMA
+
+;     INC title_screen_load_counter
+
 .CheckForControls:
     LDA joypad1_state
-    AND #BUTTON_START
+    AND #BUTTON_A
     BEQ NMI_ShowControlsPage
     LDA #$24                            ; Set the second nametable to load in
     STA current_nametable_generating
@@ -52,6 +75,33 @@ NMI_ShowControlScreen:
     STA title_screen_load_counter
     LDA #GAMESTATE_PREGAME
     STA gameStateMachine
+
+    ; Load attribute data that each 16 x 16 uses
+    LDA #$23        ; Write address $23C0 to PPUADDR register
+    STA PPUADDR     ; PPUADDR is big endian for some reason??
+    LDA #$C0
+    STA PPUADDR
+
+    LDA #%01010101  ; set all (attribute table?) to first colour palette
+    LDX #64
+.LoadAttributes_Loop:
+    STA PPUDATA
+    DEX
+    BNE .LoadAttributes_Loop
+
+    ; Load attribute data
+    LDA #$27
+    STA PPUADDR
+    LDA #$C0
+    STA PPUADDR
+
+    LDA #%01010101
+    LDX #64
+.LoadAttributes2_Loop:
+    STA PPUDATA
+    DEX
+    BNE .LoadAttributes2_Loop
+
     JMP NMI_PreGame
 
 NMI_ShowControlsPage:
@@ -63,14 +113,11 @@ NMI_ShowControlsPage:
     RTI     ; Return from interrupt
 
 NMI_ShowTitleScreen:
-
-    ; Set PPUCTRL register
- ;   LDA scroll_page
- ;   ORA #%10010000
+    JSR Title_FlashMessage
     LDA #0
     STA PPUSCROLL
     STA PPUSCROLL
-    LDA #%10010000
+    LDA #%10011000  ; Second page for sprites and background
     STA PPUCTRL
     RTI     ; Return from interrupt
 
@@ -84,11 +131,12 @@ NMI_PreGame:
     STX title_screen_load_counter
     JSR GenerateGameBackgroundColumn
 
-    ; ; Copy sprite data to the PPU
-    ; LDA #0
-    ; STA OAMADDR
-    ; LDA #$02    ; Location of the sprite? In memory
-    ; STA OAMDMA
+    ; This Messes up the second nametable generation...
+    ; Copy sprite data to the PPU
+    ;LDA #0
+    ;STA OAMADDR
+    ;LDA #$02    ; Location of the sprite? In memory
+    ;STA OAMDMA
 
     LDA #0
     STA PPUSCROLL
@@ -99,6 +147,21 @@ NMI_PreGame:
     RTI     ; Return from interrupt
 
 StartGame:
+.LoadInPlayerSprite:
+    ; Load the player sprite
+    LDX #0
+.LoadPlayerSprite_Next:
+    LDA playerSpritesDB, X
+    STA sprite_player, X
+    INX
+    CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
+    BNE .LoadPlayerSprite_Next  
+
+    ; ; Copy sprite data to the PPU
+    ; LDA #0
+    ; STA OAMADDR
+    ; LDA #$02    ; Location of the sprite? In memory
+    ; STA OAMDMA
     LDA #GAMESTATE_PLAY
     STA gameStateMachine
     
