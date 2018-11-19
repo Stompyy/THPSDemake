@@ -93,9 +93,19 @@ obstacle_offscreen_traffic_cone_info:
     .db $C7, $F1, $00, $00
 obstacle_offscreen_ledge_info:
     .db $C7, $F0, $00, $00
+    .db $C7, $F0, $00, $08
+    .db $C7, $F0, $00, $10
+    .db $C7, $F0, $00, $18
+    .db $C7, $F0, $00, $20
+    .db $C7, $F0, $00, $28
+    .db $C7, $F0, $00, $30
+    .db $C7, $F0, $00, $38
+    .db $C7, $F0, $00, $40
+    .db $C7, $F0, $00, $48
 ;----------------------------------------
-playerSpritesDB:    ; y,  tile,  attrib, x
+playerSpritesDB:
     ; Player idle
+    ; y,  tile,  attrib, x
     .db $00, $5A, $00, $20 ; old y = $80 ; newer but wrong = CE
     .db $00, $01, $00, $28 ; old y = $80 ; newer but wrong = CE
     .db $00, $10, $00, $20 ; old y = $88 ; newer but wrong = D6

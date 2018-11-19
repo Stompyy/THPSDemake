@@ -80,10 +80,12 @@ NMI_ShowControlScreen:
     LDA #$23        ; Write address $23C0 to PPUADDR register
     STA PPUADDR     ; PPUADDR is big endian for some reason??
     LDA #$C0
+    CLC
+    ADC #46         ; Only bother changing the floor bit
     STA PPUADDR
 
     LDA #%01010101  ; set all (attribute table?) to first colour palette
-    LDX #64
+    LDX #18
 .LoadAttributes_Loop:
     STA PPUDATA
     DEX
@@ -93,16 +95,25 @@ NMI_ShowControlScreen:
     LDA #$27
     STA PPUADDR
     LDA #$C0
+    CLC
+    ADC #48
     STA PPUADDR
 
-    LDA #%01010101
-    LDX #64
+    LDA #%01010000  ; For the ledge palette
+    LDX #8
 .LoadAttributes2_Loop:
     STA PPUDATA
     DEX
     BNE .LoadAttributes2_Loop
 
-    JMP NMI_PreGame
+    LDA #%01010101
+    LDX #8
+.LoadAttributes3_Loop:
+    STA PPUDATA
+    DEX
+    BNE .LoadAttributes3_Loop
+
+    JMP Render_PreGame
 
 NMI_ShowControlsPage:
     LDA #0
@@ -129,7 +140,7 @@ NMI_PreGame:
     
     INX
     STX title_screen_load_counter
-    JSR GenerateGameBackgroundColumn
+    JSR GenerateGameBackgroundColumnWithLedge
 
     ; This Messes up the second nametable generation...
     ; Copy sprite data to the PPU
@@ -137,7 +148,7 @@ NMI_PreGame:
     ;STA OAMADDR
     ;LDA #$02    ; Location of the sprite? In memory
     ;STA OAMDMA
-
+Render_PreGame:
     LDA #0
     STA PPUSCROLL
     STA PPUSCROLL
@@ -147,27 +158,21 @@ NMI_PreGame:
     RTI     ; Return from interrupt
 
 StartGame:
-.LoadInPlayerSprite:
     ; Load the player sprite
     LDX #0
 .LoadPlayerSprite_Next:
     LDA playerSpritesDB, X
     STA sprite_player, X
     INX
-    CPX #24  ; Just one (8x8 * 6) sprite loading currently. NumSprites * 4
+    CPX #24  ; Just one (8x8 * 6) sprite loading. NumSprites * 4
     BNE .LoadPlayerSprite_Next  
 
-    ; ; Copy sprite data to the PPU
-    ; LDA #0
-    ; STA OAMADDR
-    ; LDA #$02    ; Location of the sprite? In memory
-    ; STA OAMDMA
     LDA #GAMESTATE_PLAY
     STA gameStateMachine
     
 PlayGame:
 
-; Scroll - Do this first as heavy, to avoid potential flickering as screen iss already being rendered at end
+; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x
     CLC
     ADC delta_X

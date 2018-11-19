@@ -40,10 +40,6 @@ FALSE               = 0
 
 MOVEMENT_SPEED              = 1
 ANIM_FRAME_CHANGE_TIME      = 8
-
-LEDGE_DISTANCE   = 12
-LEDGE_LENGTH_RANDOM_MASK = 7
-LEDGE_MINIMUM_LENGTH  = 4
 TRAFFIC_CONE_WIDTH          = 8
 
 SCREEN_BOTTOM_Y             = 206   ; 224, 240 PAL
@@ -58,6 +54,8 @@ BRAKE_FORCE                 = 1 * 256; + 128  ; In subpixels/frame
 NUMBER_OF_TRAFFIC_CONES     = 2
 TRAFFIC_CONE_HITBOX_HEIGHT  = 8
 TRAFFIC_CONE_HITBOX_WIDTH   = 8
+
+NUMBER_OF_LEDGE_BLOCKS      = 10
 
 GAMESTATE_TITLE             = 0
 GAMESTATE_CONTROLS          = 1
@@ -106,12 +104,12 @@ forward_speed                   .rs 2   ; In subpixel per frame - 16 bits
 forward_speed_sub               .rs 1   ; in subpixels
 delta_X                         .rs 1   ; The product of the carry flag subpixel calculations
 
-scroll_x            .rs 1
-scroll_page         .rs 1
+scroll_x                        .rs 1
+scroll_page                     .rs 1
 
-seed                .rs 2
-generate_x          .rs 1   ; which column to generate next
-                            ; could be any of 63
+seed                            .rs 2
+generate_x                      .rs 1   ; which column to generate next
+                                        ; could be any of 63
 generate_counter                .rs 1
 generate_length_length          .rs 1
 
@@ -126,14 +124,13 @@ generate_game_background_row_counter .rs 1
 should_generate_game_background .rs 1
 current_nametable_generating    .rs 1
 
-title_screen_flash_timer              .rs 1
-
-traffic_cone_obstacle_info      .rs 4 * NUMBER_OF_TRAFFIC_CONES
+title_screen_flash_timer        .rs 1
 
     .rsset $0200
 sprite_player                   .rs 4 * 6
 sprite_traffic_cones            .rs 4 * NUMBER_OF_TRAFFIC_CONES
 sprite_text_blanking_box_white  .rs 4 * 5
+sprite_ledge                    .rs 4 * NUMBER_OF_LEDGE_BLOCKS
 
     .rsset $0000
 SPRITE_Y            .rs 1

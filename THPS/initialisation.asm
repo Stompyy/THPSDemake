@@ -74,6 +74,7 @@ InitialiseGame:
     STA OAMDMA
 
     JSR LoadNewTrafficCone
+ ;   JSR LoadNewLedge
 
     ; Load attribute data that each 16 x 16 uses
     LDA #$23        ; Write address $23C0 to PPUADDR register

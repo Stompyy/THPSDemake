@@ -22,7 +22,16 @@ CheckControls:
     BNE .ReadController      ; If not equal, return to function start
 
     RTS
-
+;----------------------------------------
+LoadNewLedge:
+    LDX #0
+.NewLedge_Loop:
+    LDA obstacle_offscreen_ledge_info, X
+    STA sprite_ledge, X
+    INX
+    CPX #40;NUMBER_OF_TRAFFIC_CONES*4
+    BNE .NewLedge_Loop
+    RTS
 ;----------------------------------------
 LoadNewTrafficCone:
     LDX #0
@@ -36,22 +45,35 @@ LoadNewTrafficCone:
 ;----------------------------------------
 UpdateObstaclePositions:
     LDX #3
-    LDY #1
-.Update_Loop:
+    LDY #0
+.Update_traffic_cones_Loop:
     LDA sprite_traffic_cones, X
     SEC
     SBC delta_X
     STA sprite_traffic_cones, X
-    CLC
-    CPY #NUMBER_OF_TRAFFIC_CONES
-    BCC .Update_End
     INX
     INX
     INX
     INX
     INY
-    JMP .Update_Loop
-.Update_End:
+    CPY #NUMBER_OF_TRAFFIC_CONES
+    BNE .Update_traffic_cones_End
+.Update_traffic_cones_End:
+
+    LDX #3
+    LDY #0
+.Update_Ledge_Loop:
+    LDA sprite_ledge, X
+    SEC
+    SBC delta_X
+    STA sprite_ledge, X
+    INX
+    INX
+    INX
+    INX
+    INY
+    CPY #NUMBER_OF_LEDGE_BLOCKS
+    BNE .Update_Ledge_Loop
     RTS
 ;----------------------------------------
 UpdateSpeed:
@@ -184,6 +206,43 @@ GenerateGameBackgroundColumn:
     STA PPUDATA
     DEX
     BNE .GenerateEmptyTile
+    LDA #$F0    ; Floor
+    STA PPUDATA
+    LDX #3
+    LDA #$F2    ; Underground
+    CLC
+.GenerateBricks:
+    STA PPUDATA
+    DEX
+    BNE .GenerateBricks
+
+    INC generate_x
+
+    LDA #0
+    STA PPUSCROLL
+    STA PPUSCROLL
+    LDA #%00000000
+    STA PPUCTRL
+    RTS
+;----------------------------------------
+GenerateGameBackgroundColumnWithLedge:
+    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1 ; Also set the nametable?
+    LDA #%00000100
+    STA PPUCTRL ; Have to restore back to previous values later
+
+    LDA current_nametable_generating
+    STA PPUADDR
+    LDA generate_x
+    STA PPUADDR
+
+    LDX #25     ; 30 rows = 26 empty + 1 floor + 3 bricks underground
+    LDA #$00    ; Location of an empty tile in the sprite sheet
+.GenerateEmptyTile:
+    STA PPUDATA
+    DEX
+    BNE .GenerateEmptyTile
+    LDA #$F0    ; Ledge
+    STA PPUDATA
     LDA #$F0    ; Floor
     STA PPUDATA
     LDX #3

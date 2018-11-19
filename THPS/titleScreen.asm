@@ -174,7 +174,7 @@ Controls_NextRow:
     LDA stillframes_showcase, X
     STA PPUDATA
     INX
-    CPX #192
+    CPX #224
     BNE .FillUnderStillframesShowcase
 
     LDX #0
@@ -182,7 +182,7 @@ Controls_NextRow:
 .FillOutLastSection:
     STA PPUDATA
     INX
-    CPX #128
+    CPX #96
     BNE .FillOutLastSection
 
     LDA #GAMESTATE_CONTROLS
@@ -224,3 +224,4 @@ stillframes_showcase:
     .db $E0, $E0, $10, $11, $E0, $12, $13, $E0, $34, $35, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $86, $87, $E0, $80, $81, $E0, $E0, $E0, $E0, $E0, $56, $57, $1C, $1D, $E0 
     .db $E0, $E0, $20, $21, $E0, $22, $23, $E0, $E0, $E0, $E0, $E0, $E0, $F1, $E0, $E0, $F0, $F0, $F0, $F0, $F0, $F0, $F0, $E0, $E0, $E0, $E0, $E0, $E0, $2C, $2D, $E0 
     .db $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0
+    .db $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $C0, $97, $98, $99, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0, $E0
