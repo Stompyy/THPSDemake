@@ -6,13 +6,19 @@
     .bank 0
     .org $C000
 ;------------------------------------------
+    INCLUDE "animationDatabase.asm"
+    INCLUDE "spriteDatabase.asm"
+    INCLUDE "controlScreenBackgroundDatabase.asm"
+
+    INCLUDE "palettes.asm"
+
     INCLUDE "macros.asm"
     INCLUDE "subroutines.asm"
     INCLUDE "variables.asm"
+
     INCLUDE "titleScreen.asm"
     INCLUDE "initialisation.asm"
     INCLUDE "animation.asm"
-    INCLUDE "animationDatabase.asm"
     INCLUDE "NMI.asm"
 ;------------------------------------------
 
@@ -71,7 +77,6 @@ clrmem:
   
     ; Other things you can do between vblank waits are set up audio 
     ; or set up other mapper registers.
-   
 
 vblankwait2:      ; Second wait for vblank, PPU is ready after this
     BIT PPUSTATUS
@@ -82,44 +87,6 @@ vblankwait2:      ; Second wait for vblank, PPU is ready after this
 ; Enter an infinite loop
 Forever:
     JMP Forever     ; Jump back to Forever, infinite loop
-
-;----------------------------------------
-palettes:
-    .db $30, $0F, $27, $2C  ; Player sprite / Title screens
-    .db $30, $3D, $2D, $37  ; Background
-    .db $0F, $30, $30, $30  ; White
-    .db $0F, $00, $31, $3D  ; Ledge
-;----------------------------------------
-obstacle_offscreen_traffic_cone_info:
-    .db $C7, $F1, $00, $00
-obstacle_offscreen_ledge_info:
-    .db $C7, $F0, $00, $00
-    .db $C7, $F0, $00, $08
-    .db $C7, $F0, $00, $10
-    .db $C7, $F0, $00, $18
-    .db $C7, $F0, $00, $20
-    .db $C7, $F0, $00, $28
-    .db $C7, $F0, $00, $30
-    .db $C7, $F0, $00, $38
-    .db $C7, $F0, $00, $40
-    .db $C7, $F0, $00, $48
-;----------------------------------------
-playerSpritesDB:
-    ; Player idle
-    ; y,  tile,  attrib, x
-    .db $00, $5A, $00, $20 ; old y = $80 ; newer but wrong = CE
-    .db $00, $01, $00, $28 ; old y = $80 ; newer but wrong = CE
-    .db $00, $10, $00, $20 ; old y = $88 ; newer but wrong = D6
-    .db $00, $11, $00, $28 ; old y = $88 ; newer but wrong = D6
-    .db $00, $20, $00, $20 ; old y = $90 ; newer but wrong = EE
-    .db $00, $21, $00, $28 ; old y = $90 ; newer but wrong = EE
-whiteBlankBoxDB:
-; Blocks the 'press start' message on the title screen to make it flash
-    .db $5A, $38, $02, $70
-    .db $5A, $38, $02, $78
-    .db $5A, $38, $02, $80
-    .db $5A, $38, $02, $88
-    .db $5A, $38, $02, $90
 ;----------------------------------------
     .bank 1
     .org $FFFA      ; First of the three vectors starts here

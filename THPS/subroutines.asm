@@ -1,36 +1,29 @@
 ;----------------------------------------
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
 ;----------------------------------------
-
+;----------------------------------------
+; Populates the joypad1_state with the currently pressed buttons
 CheckControls:
-;Controls
     ; Initialise controller 1
-    LDA #1
+    LDA #1              ; Flash the controller with 0 and 1 to get a reading
     STA JOYPAD1
     LDA #0
     STA JOYPAD1
+    ; Initialise to %00000000
     LDX #0
-    STX joypad1_state   ; set to 0
+    STX joypad1_state
 
 .ReadController:
     ;a(d key) b(f key) select start up down left right
     LDA JOYPAD1
     LSR A
     ROL joypad1_state
-    INX                     ; Increment count
-    CPX #8                  ; Compare X to 8
-    BNE .ReadController      ; If not equal, return to function start
+    INX                         ; Increment count
+    CPX #8                      ; Compare X to 8
+    BNE .ReadController         ; If not equal, return to function start
 
-    RTS
-;----------------------------------------
-LoadNewLedge:
-    LDX #0
-.NewLedge_Loop:
-    LDA obstacle_offscreen_ledge_info, X
-    STA sprite_ledge, X
-    INX
-    CPX #40;NUMBER_OF_TRAFFIC_CONES*4
-    BNE .NewLedge_Loop
+    ; joypad1_state now holds 8 * 0 or 1 values that reflect the current pressed buttons state
+    ; in the order a, b, select, start, up, down, left, right
     RTS
 ;----------------------------------------
 LoadNewTrafficCone:
@@ -59,21 +52,6 @@ UpdateObstaclePositions:
     CPY #NUMBER_OF_TRAFFIC_CONES
     BNE .Update_traffic_cones_End
 .Update_traffic_cones_End:
-
-    LDX #3
-    LDY #0
-.Update_Ledge_Loop:
-    LDA sprite_ledge, X
-    SEC
-    SBC delta_X
-    STA sprite_ledge, X
-    INX
-    INX
-    INX
-    INX
-    INY
-    CPY #NUMBER_OF_LEDGE_BLOCKS
-    BNE .Update_Ledge_Loop
     RTS
 ;----------------------------------------
 UpdateSpeed:
@@ -289,3 +267,18 @@ Title_FlashMessage:
     STA OAMDMA
     RTS
 ;----------------------------------------
+Grind_CheckForEndOfLedge:
+    LDA scroll_page
+    CMP #END_OF_LEDGE_MARKER_PAGE
+    BEQ .CheckPosition
+    RTS
+.CheckPosition:
+    LDA scroll_x
+    CLC
+    CMP #END_OF_LEDGE_MARKER_SCROLL
+    BCS .FallOfEndOfLedge
+    RTS
+.FallOfEndOfLedge:
+    LDA #FALSE
+    STA is_grinding
+    RTS

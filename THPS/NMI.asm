@@ -1,22 +1,25 @@
-NMI:        ; Non maskable interrupt
-
+NMI:
+    ; Every game state requires a controls check
     JSR CheckControls
 
+    ; Check the gameStateMachine and jump to the appropriate code that governs that state
+    ; Do GAMESTATE_PLAY first as most likely.
     LDA gameStateMachine
     CMP #GAMESTATE_PLAY
-    BNE .InMenus1
-    JMP PlayGame
-.InMenus1:
+    BNE .gamestate_notPlaying
+    JMP PlayGame                ; Playing the game
+.gamestate_notPlaying:
     CMP #GAMESTATE_CONTROLS
-    BNE .InMenus2
-    JMP NMI_ShowControlScreen
-.InMenus2:
+    BNE .gamestate_notControlScreen
+    JMP NMI_ShowControlScreen   ; In controls 
+.gamestate_notControlScreen:
     CMP #GAMESTATE_PREGAME
-    BNE .InMenus3
+    BNE .gameState_notPregame
     JMP NMI_PreGame
-.InMenus3:
-    ; Else continue to show title screen that was loaded in on initialisation
+.gameState_notPregame:
+    JMP NMI_TitleScreen         ; Else continue to show title screen that was loaded in on initialisation
 
+NMI_TitleScreen:
 ; In Title screen controls
     ; React to A or B button
     LDA joypad1_state
@@ -28,7 +31,7 @@ NMI:        ; Non maskable interrupt
     ; One time init of the game background generator
     LDA #0
     STA generate_x
-    STA title_screen_load_counter
+    STA background_load_counter
     LDA #$20
     STA current_nametable_generating
     LDA #GAMESTATE_CONTROLS
@@ -36,13 +39,13 @@ NMI:        ; Non maskable interrupt
 
 ; Check if new column needs to be generated before allowing controls to exit
 NMI_ShowControlScreen:
-    LDX title_screen_load_counter
+    LDX background_load_counter
     CPX #32
     BEQ .CheckForControls
 
 
     INX
-    STX title_screen_load_counter
+    STX background_load_counter
     JSR GenerateGameBackgroundColumn
     JMP NMI_ShowControlsPage
 
@@ -62,7 +65,7 @@ NMI_ShowControlScreen:
 ;     LDA #$02    ; Location of the sprite? In memory
 ;     STA OAMDMA
 
-;     INC title_screen_load_counter
+;     INC background_load_counter
 
 .CheckForControls:
     LDA joypad1_state
@@ -72,7 +75,7 @@ NMI_ShowControlScreen:
     STA current_nametable_generating
     LDA #0
     STA generate_x
-    STA title_screen_load_counter
+    STA background_load_counter
     LDA #GAMESTATE_PREGAME
     STA gameStateMachine
 
@@ -99,7 +102,7 @@ NMI_ShowControlScreen:
     ADC #48
     STA PPUADDR
 
-    LDA #%01011111  ; For the ledge palette
+    LDA #%01011010  ; For the ledge palette
     LDX #8
 .LoadAttributes2_Loop:
     STA PPUDATA
@@ -134,12 +137,12 @@ NMI_ShowTitleScreen:
 
 NMI_PreGame:
 
-    LDX title_screen_load_counter
+    LDX background_load_counter
     CPX #32
     BEQ StartGame
     
     INX
-    STX title_screen_load_counter
+    STX background_load_counter
     JSR GenerateGameBackgroundColumnWithLedge
 
     ; This Messes up the second nametable generation...
@@ -191,6 +194,12 @@ Scroll_NoWrap:
     LDA #0
     STA PPUSCROLL   ; y scroll
 
+    LDA is_grinding
+    CMP #FALSE
+    BEQ .CheckRegularControls
+    JMP ReadControls_Done
+
+.CheckRegularControls:
     ; React to B button
     LDA joypad1_state
     AND #BUTTON_B
@@ -332,13 +341,19 @@ ReadDown_Done:
     STA is_fakie    ; To tell the landing animation which anim to use
 ReadA_Done:
 
-;ReadControls_Done:
+ReadControls_Done:
 
     CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #24, #24, #2, #2, NoCollisionWithCone 
 
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
 
 NoCollisionWithCone:
+
+    LDA is_grinding
+    CMP #FALSE
+    BEQ WaitingForGrind
+
+    JSR Grind_CheckForEndOfLedge
 
 WaitingForGrind:
 
@@ -347,7 +362,23 @@ WaitingForGrind:
     BEQ .SkipGravityAndSpeed
     JSR UpdateGravity
     JSR UpdateSpeed
+    JMP .GrindChecksDone
 .SkipGravityAndSpeed:
+
+    LDA joypad1_state       ; Check for ollie off the ledge
+    AND #BUTTON_A
+    BEQ .GrindChecksDone
+    LDA #FALSE
+    STA is_grinding
+    ; Set up the OLLIE animation
+    Animation_SetUp #ANIM_OFFSET_OLLIE, #TOTAL_ANIM_TILES_OLLIE
+    ; Ollie (set player downward speed to jump force)
+    LDA #LOW(JUMP_FORCE)
+    STA player_downward_speed
+    LDA #HIGH(JUMP_FORCE)
+    STA player_downward_speed + 1
+
+.GrindChecksDone:
 
     JSR UpdateObstaclePositions
 
@@ -372,13 +403,29 @@ WaitingForGrind:
     CLC
     CMP #GRIND_THRESHOLD            ; Compare to threshold height
     BNE .JumpToPlayerNotGrindingLedge
-    LDA #TRUE
-    STA is_grinding
+
+    LDA scroll_page
+    CMP #0      ; are we on the first nametable page or not?
+    BNE .CheckSecondPageLedgePlacement
+    LDA scroll_x
+    CLC
+    CMP #START_OF_LEDGE_MARKER_SCROLL
+    BCC .JumpToPlayerNotGrindingLedge
     JMP .ChooseGrind
+
+.CheckSecondPageLedgePlacement:
+    LDA scroll_x
+    CLC
+    CMP #END_OF_LEDGE_MARKER_SCROLL
+    BCS .JumpToPlayerNotGrindingLedge
+    JMP .ChooseGrind
+
 .JumpToPlayerNotGrindingLedge
     JMP .PlayerNotGrindingLedge
 
 .ChooseGrind:
+    LDA #TRUE
+    STA is_grinding
     LDA joypad1_state
     AND #BUTTON_LEFT
     BEQ .GrindNotBluntslide
