@@ -138,7 +138,7 @@ Controls_NextRow:
     LDA stillframes_showcase, X
     STA PPUDATA
     INX
-    CPX #NUMBER_OF_TILES_PER_ROW * 4
+    CPX #NUMBER_OF_TILES_PER_ROW * 7
     BNE .FillUnderStillframesShowcase
 
     LDX #0

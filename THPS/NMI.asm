@@ -34,6 +34,7 @@ NMI_State_TitleScreen:
     STA current_nametable_generating
     LDA #GAMESTATE_CONTROLS
     STA gameStateMachine
+    JMP NMI_ShowControlsPage
 
 ; Check if new column needs to be generated before allowing controls to exit
 NMI_State_ControlScreen:
@@ -66,6 +67,7 @@ NMI_State_ControlScreen:
 ;     INC background_load_counter
 
 .CheckForControls:
+    JSR CheckControls
     LDA joypad1_state
     AND #BUTTON_A
     BEQ NMI_ShowControlsPage
@@ -172,6 +174,7 @@ StartGame:
     STA gameStateMachine
     
 NMI_State_PlayGame:
+    JSR CheckControls
 
 ; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x

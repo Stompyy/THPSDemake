@@ -201,6 +201,7 @@ GenerateGameBackgroundColumn:
     STA PPUSCROLL
     LDA #%00000000
     STA PPUCTRL
+    JMP NMI_ShowControlsPage
     RTS
 ;----------------------------------------
 GenerateGameBackgroundColumnWithLedge:
