@@ -191,14 +191,31 @@ Scroll_NoWrap:
     LDA #0
     STA PPUSCROLL   ; y scroll
 
-    ; Chwck if a column of background needs to be generated
-    LDA scroll_x
-    AND #7          ; Wipe out everything from the 8 bit onwards
-                    ; if zero flag set, then generate
-    BNE Scroll_NoGenerate   ; else skip
-
-    ;JSR GenerateColumn
-Scroll_NoGenerate:
+    ; React to B button
+    LDA joypad1_state
+    AND #BUTTON_B
+    BEQ ReadB_Done
+    LDA is_animating
+    CMP #TRUE
+    BEQ ReadB_Done
+    LDA is_grounded
+    CMP #TRUE
+    BEQ .B_pressed_grounded
+    JMP WaitingForGrind
+.B_pressed_grounded:
+    ; Set up the NOLLIE animation
+    Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
+    ; Ollie (set player downward speed to jump force)
+    LDA #LOW(JUMP_FORCE)
+    STA player_downward_speed
+    LDA #HIGH(JUMP_FORCE)
+    STA player_downward_speed + 1
+    ; Move off the ground to allow forces
+    Player_Move SPRITE_Y, #-2
+    ; Change bool
+    LDA #FALSE
+    STA is_grounded
+ReadB_Done:
 
     ; React to Left button
     LDA joypad1_state
@@ -315,30 +332,6 @@ ReadDown_Done:
     STA is_fakie    ; To tell the landing animation which anim to use
 ReadA_Done:
 
-    ; React to B button
-    LDA joypad1_state
-    AND #BUTTON_B
-    BEQ ReadB_Done
-    LDA is_animating
-    CMP #TRUE
-    BEQ ReadB_Done
-    LDA is_grounded
-    CMP #FALSE
-    BEQ ReadB_Done
-    ; Set up the NOLLIE animation
-    Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
-    ; Ollie (set player downward speed to jump force)
-    LDA #LOW(JUMP_FORCE)
-    STA player_downward_speed
-    LDA #HIGH(JUMP_FORCE)
-    STA player_downward_speed + 1
-    ; Move off the ground to allow forces
-    Player_Move SPRITE_Y, #-2
-    ; Change bool
-    LDA #FALSE
-    STA is_grounded
-ReadB_Done:
-
 ;ReadControls_Done:
 
     CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #24, #24, #2, #2, NoCollisionWithCone 
@@ -346,6 +339,8 @@ ReadB_Done:
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
 
 NoCollisionWithCone:
+
+WaitingForGrind:
 
     LDA is_grinding
     CMP #TRUE
@@ -357,7 +352,7 @@ NoCollisionWithCone:
     JSR UpdateObstaclePositions
 
     ; Temp just skips the grinding wip
-    JMP .PlayerNotGrindingLedge
+  ;  JMP .PlayerNotGrindingLedge
     
 
     
@@ -366,10 +361,7 @@ NoCollisionWithCone:
     BEQ .CheckForGrind
     JMP .PlayerNotGrindingLedge
 .CheckForGrind:
-  ;  LDA player_downward_speed+1     ; Limit triggering grinding to when falling
-  ;  CMP #1
-  ;  BCC .JumpToPlayerNotGrindingLedge
-
+    LDA player_downward_speed+1     ; Limit triggering grinding to when falling
     BMI .JumpToPlayerNotGrindingLedge
     LDA joypad1_state
     AND #BUTTON_B
@@ -379,7 +371,7 @@ NoCollisionWithCone:
     ADC #24                         ; Y offset of three tiles to find the bottom.y of player
     CLC
     CMP #GRIND_THRESHOLD            ; Compare to threshold height
-    BCS .JumpToPlayerNotGrindingLedge
+    BNE .JumpToPlayerNotGrindingLedge
     LDA #TRUE
     STA is_grinding
     JMP .ChooseGrind

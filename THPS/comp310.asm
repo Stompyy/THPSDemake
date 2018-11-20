@@ -88,7 +88,7 @@ palettes:
     .db $30, $0F, $27, $2C  ; Player sprite / Title screens
     .db $30, $3D, $2D, $37  ; Background
     .db $0F, $30, $30, $30  ; White
-    .db $0F, $0F, $31, $3D  ; Ledge
+    .db $0F, $00, $31, $3D  ; Ledge
 ;----------------------------------------
 obstacle_offscreen_traffic_cone_info:
     .db $C7, $F1, $00, $00

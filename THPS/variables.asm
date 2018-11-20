@@ -44,7 +44,14 @@ TRAFFIC_CONE_WIDTH          = 8
 
 SCREEN_BOTTOM_Y             = 206   ; 224, 240 PAL
 GRIND_HEIGHT                = SCREEN_BOTTOM_Y - 7
-GRIND_THRESHOLD             = GRIND_HEIGHT - 8
+GRIND_THRESHOLD             = GRIND_HEIGHT - 6  ; trigger the grind a bit above the grind height to keep player sprite head level
+
+START_OF_LEDGE_MARKER_SCROLL    = $D9
+START_OF_LEDGE_MARKER_PAGE      = 0
+END_OF_LEDGE_MARKER_SCROLL      = $D1
+END_OF_LEDGE_MARKER_PAGE        = 1
+
+
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 KONAMI_JUMP_FORCE           = -(2 * 256 + 128)
@@ -112,7 +119,7 @@ scroll_page                     .rs 1
 
 seed                            .rs 2
 generate_x                      .rs 1   ; which column to generate next
-                                        ; could be any of 63
+                                        ; could be any of 63  
 generate_counter                .rs 1
 generate_length_length          .rs 1
 
