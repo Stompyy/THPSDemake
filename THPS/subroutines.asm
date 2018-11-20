@@ -1,6 +1,7 @@
 ;----------------------------------------
 ;;;;;;;;;----SUBROUTINES----;;;;;;;;;
 ;----------------------------------------
+
 ;----------------------------------------
 ; Populates the joypad1_state with the currently pressed buttons
 CheckControls:
@@ -201,7 +202,6 @@ GenerateGameBackgroundColumn:
     STA PPUSCROLL
     LDA #%00000000
     STA PPUCTRL
-    JMP NMI_ShowControlsPage
     RTS
 ;----------------------------------------
 GenerateGameBackgroundColumnWithLedge:

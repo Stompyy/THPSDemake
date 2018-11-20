@@ -15,8 +15,10 @@
     INCLUDE "macros.asm"
     INCLUDE "subroutines.asm"
     INCLUDE "variables.asm"
+    INCLUDE "stateMachine.asm"
 
     INCLUDE "titleScreen.asm"
+    INCLUDE "controls.asm"
     INCLUDE "initialisation.asm"
     INCLUDE "animation.asm"
     INCLUDE "NMI.asm"

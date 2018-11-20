@@ -35,7 +35,7 @@ CheckCollisionWithCone .macro
 ; If there is a collision, execution continues immediately after this macro
 ; Else, jump to no_collision_label
 
-    LDA sprite_traffic_cones + SPRITE_X, x
+    LDA sprite_traffic_cones + SPRITE_X
     .if \3 > 0
     SEC
     SBC \3    ; Adjust for the bullet image position
@@ -54,7 +54,7 @@ CheckCollisionWithCone .macro
     CMP \1
     BCC \7
 
-    LDA sprite_traffic_cones + SPRITE_Y, x
+    LDA sprite_traffic_cones + SPRITE_Y
     .if \4 > 0
     SEC
     SBC \4

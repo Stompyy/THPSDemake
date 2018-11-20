@@ -20,6 +20,7 @@ BUTTON_DOWN     = %00000100
 BUTTON_LEFT     = %00000010
 BUTTON_RIGHT    = %00000001
 
+; Flags for konami code. Not currently used sadly...
 KONAMI_CHECK_STEP_1 = %00000000
 KONAMI_CHECK_STEP_2 = %00000001
 KONAMI_CHECK_STEP_3 = %00000011
@@ -30,12 +31,14 @@ KONAMI_CHECK_STEP_7 = %00111111
 KONAMI_CHECK_STEP_8 = %01111111
 KONAMI_CHECK_STEP_9 = %11111111
 
+; Flags for now unused player_state byte
 IS_ANIMATING        = %00000001
 IS_GROUNDED         = %00000010
 IS_FAKIE            = %00000100
 IS_PERFORMING_TRICK = %00001000
 IS_GRINDING         = %00010000
 
+; For bool checking in a nice readable manner
 TRUE                = 1
 FALSE               = 0
 
@@ -63,14 +66,11 @@ FRICTION                    = -2
 PUSH_FORCE                  = 650       ; In subpixels/frame
 BRAKE_FORCE                 = 250       ; In subpixels/frame
 
-NUMBER_OF_TRAFFIC_CONES     = 2
+NUMBER_OF_TRAFFIC_CONES     = 1
 TRAFFIC_CONE_HITBOX_HEIGHT  = 8
 TRAFFIC_CONE_HITBOX_WIDTH   = 8
 
-GAMESTATE_TITLE             = 0
-GAMESTATE_CONTROLS          = 1
-GAMESTATE_PREGAME           = 2
-GAMESTATE_PLAY              = 3
+
 
 ;----------------------------------------
 ;;; All get initialised to zero
@@ -95,6 +95,13 @@ player_state                    .rs 1
 ; ||+-------
 ; |+-------- 
 ; +--------- is Konami God mode (jump force increased)
+;----------------------------------------
+; Have since decided against this. Maintainability and readability are far better using TRUE or FALSE checks
+; For completeness, implementation would be:
+;   LDA player_state AND #flag == 0                 (if '1-bit' in flag is not present in player_state)
+;   LDA player_state ORA #flag STA player_state     (to set the '1-bit' in flag in player_state)
+;   LDA player_state SEC SBC #flag                  (to remove the '1-bit' in flag in player_state. Bit should be present before trying to remove)
+;----------------------------------------
 
 is_animating                    .rs 1
 is_grounded                     .rs 1
