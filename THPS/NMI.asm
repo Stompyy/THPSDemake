@@ -99,7 +99,7 @@ NMI_ShowControlScreen:
     ADC #48
     STA PPUADDR
 
-    LDA #%01010000  ; For the ledge palette
+    LDA #%01011111  ; For the ledge palette
     LDX #8
 .LoadAttributes2_Loop:
     STA PPUDATA
@@ -347,11 +347,75 @@ ReadB_Done:
 
 NoCollisionWithCone:
 
-    JSR UpdateSpeed
-
+    LDA is_grinding
+    CMP #TRUE
+    BEQ .SkipGravityAndSpeed
     JSR UpdateGravity
+    JSR UpdateSpeed
+.SkipGravityAndSpeed:
 
     JSR UpdateObstaclePositions
+
+    ; Temp just skips the grinding wip
+    JMP .PlayerNotGrindingLedge
+    
+
+    
+    LDA is_grounded
+    CMP #FALSE
+    BEQ .CheckForGrind
+    JMP .PlayerNotGrindingLedge
+.CheckForGrind:
+  ;  LDA player_downward_speed+1     ; Limit triggering grinding to when falling
+  ;  CMP #1
+  ;  BCC .JumpToPlayerNotGrindingLedge
+
+    BMI .JumpToPlayerNotGrindingLedge
+    LDA joypad1_state
+    AND #BUTTON_B
+    BEQ .JumpToPlayerNotGrindingLedge
+    LDA sprite_player + SPRITE_Y    ; Get the current vertical position of the first tile
+    CLC
+    ADC #24                         ; Y offset of three tiles to find the bottom.y of player
+    CLC
+    CMP #GRIND_THRESHOLD            ; Compare to threshold height
+    BCS .JumpToPlayerNotGrindingLedge
+    LDA #TRUE
+    STA is_grinding
+    JMP .ChooseGrind
+.JumpToPlayerNotGrindingLedge
+    JMP .PlayerNotGrindingLedge
+
+.ChooseGrind:
+    LDA joypad1_state
+    AND #BUTTON_LEFT
+    BEQ .GrindNotBluntslide
+    Animation_SetUp #ANIM_OFFSET_BLUNTSLIDE, #TOTAL_ANIM_TILES_BLUNTSLIDE
+    JMP .PlayerSetGrindHeight
+.GrindNotBluntslide:    
+    LDA joypad1_state
+    AND #BUTTON_RIGHT
+    BEQ .GrindNotCrooked
+    Animation_SetUp #ANIM_OFFSET_CROOKED, #TOTAL_ANIM_TILES_CROOKED
+    JMP .PlayerSetGrindHeight
+.GrindNotCrooked:    
+    LDA joypad1_state
+    AND #BUTTON_UP
+    BEQ .GrindNotNosegrind
+    Animation_SetUp #ANIM_OFFSET_NOSEGRIND, #TOTAL_ANIM_TILES_NOSEGRIND
+    JMP .PlayerSetGrindHeight
+.GrindNotNosegrind:    
+    LDA joypad1_state
+    AND #BUTTON_DOWN
+    BEQ .PlayerNotSpecialGrind
+    Animation_SetUp #ANIM_OFFSET_50, #TOTAL_ANIM_TILES_50
+    JMP .PlayerSetGrindHeight
+.PlayerNotSpecialGrind:
+    Animation_SetUp #ANIM_OFFSET_5050, #TOTAL_ANIM_TILES_5050
+.PlayerSetGrindHeight:
+    Player_Set_Position #GRIND_HEIGHT
+    JMP .SkipGravityAndSpeed
+.PlayerNotGrindingLedge:
 
     LDA is_animating
     CMP #FALSE

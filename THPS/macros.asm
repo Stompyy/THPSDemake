@@ -92,7 +92,7 @@ Player_Set_Position .macro
     LDA \1
     SEC
     SBC #23
-.MoveEachTile_loop2:
+.MoveEachTile_loop2\@:
     STA sprite_player + SPRITE_Y, X
 
     INX
@@ -103,7 +103,7 @@ Player_Set_Position .macro
     STA sprite_player + SPRITE_Y, X
 
     CPY #16
-    BEQ .done2
+    BEQ .done2\@
 
     CLC
     ADC #8
@@ -121,6 +121,6 @@ Player_Set_Position .macro
     INY
     INY
     INY
-    JMP .MoveEachTile_loop2
-.done2
+    JMP .MoveEachTile_loop2\@
+.done2\@:
     .endm

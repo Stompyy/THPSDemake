@@ -28,7 +28,7 @@ InitialiseGame:
     LDA palettes, X
     STA PPUDATA
     INX
-    CPX #12
+    CPX #16
     BNE .LoadPalette_BackgroundLoop    
 
 

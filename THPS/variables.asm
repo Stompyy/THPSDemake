@@ -43,6 +43,8 @@ ANIM_FRAME_CHANGE_TIME      = 8
 TRAFFIC_CONE_WIDTH          = 8
 
 SCREEN_BOTTOM_Y             = 206   ; 224, 240 PAL
+GRIND_HEIGHT                = SCREEN_BOTTOM_Y - 7
+GRIND_THRESHOLD             = GRIND_HEIGHT - 8
 GRAVITY                     = 10     ; In subpixels/frame^2
 JUMP_FORCE                  = -(1 * 256 + 128)  ; In subpixels/frame
 KONAMI_JUMP_FORCE           = -(2 * 256 + 128)
@@ -89,6 +91,7 @@ player_state                    .rs 1
 is_animating                    .rs 1
 is_grounded                     .rs 1
 is_fakie                        .rs 1
+is_grinding                     .rs 1
 is_performing_trick             .rs 1
 is_konami_god_mode              .rs 1
 is_title_screen                 .rs 1
