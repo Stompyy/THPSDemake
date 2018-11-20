@@ -1,27 +1,25 @@
 NMI:
-    ; Every game state requires a controls check
-    JSR CheckControls
-
     ; Check the gameStateMachine and jump to the appropriate code that governs that state
     ; Do GAMESTATE_PLAY first as most likely.
     LDA gameStateMachine
     CMP #GAMESTATE_PLAY
     BNE .gamestate_notPlaying
-    JMP PlayGame                ; Playing the game
+    JMP NMI_State_PlayGame              ; Playing the game
 .gamestate_notPlaying:
     CMP #GAMESTATE_CONTROLS
     BNE .gamestate_notControlScreen
-    JMP NMI_ShowControlScreen   ; In controls 
+    JMP NMI_State_ControlScreen         ; In control screen
 .gamestate_notControlScreen:
     CMP #GAMESTATE_PREGAME
     BNE .gameState_notPregame
-    JMP NMI_PreGame
+    JMP NMI_State_PreGame               ; In pregame
 .gameState_notPregame:
-    JMP NMI_TitleScreen         ; Else continue to show title screen that was loaded in on initialisation
+    JMP NMI_State_TitleScreen           ; Else continue to show title screen that was loaded in on initialisation
 
-NMI_TitleScreen:
+NMI_State_TitleScreen:
 ; In Title screen controls
     ; React to A or B button
+    JSR CheckControls
     LDA joypad1_state
     AND #BUTTON_START
     BNE .InitControlScreen
@@ -38,7 +36,7 @@ NMI_TitleScreen:
     STA gameStateMachine
 
 ; Check if new column needs to be generated before allowing controls to exit
-NMI_ShowControlScreen:
+NMI_State_ControlScreen:
     LDX background_load_counter
     CPX #32
     BEQ .CheckForControls
@@ -135,7 +133,7 @@ NMI_ShowTitleScreen:
     STA PPUCTRL
     RTI     ; Return from interrupt
 
-NMI_PreGame:
+NMI_State_PreGame:
 
     LDX background_load_counter
     CPX #32
@@ -173,7 +171,7 @@ StartGame:
     LDA #GAMESTATE_PLAY
     STA gameStateMachine
     
-PlayGame:
+NMI_State_PlayGame:
 
 ; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x
