@@ -1,4 +1,6 @@
 ;----------------------------------------
+;;;;;;;----------PALETTES---------;;;;;;;
+;----------------------------------------
 sprite_palettes:
     .db $30, $0F, $27, $2C  ; Player sprite / Title screens
     .db $0F, $30, $30, $30  ; White text blanking box

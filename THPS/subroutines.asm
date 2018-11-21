@@ -4,7 +4,7 @@
 
 ;----------------------------------------
 ; Populates the joypad1_state with the currently pressed buttons
-CheckControls:
+Check_Controls:
     ; Initialise controller 1
     LDA #1              ; Flash the controller with 0 and 1 to get a reading
     STA JOYPAD1
@@ -23,22 +23,22 @@ CheckControls:
     CPX #8                      ; Compare X to 8
     BNE .ReadController         ; If not equal, return to function start
 
-    ; joypad1_state now holds 8 * 0 or 1 values that reflect the current pressed buttons state
+    ; joypad1_state now holds 8 * 0 or 1 bit values that reflect the current pressed buttons state
     ; in the order a, b, select, start, up, down, left, right
     RTS
 ;----------------------------------------
-LoadNewTrafficCone:
+Load_New_Traffic_Cone:
     LDX #0
 .NewCone_Loop:
     LDA obstacle_offscreen_traffic_cone_info, X
     STA sprite_traffic_cones, X
     INX
-    CPX #4
+    CPX #LENGTH_OF_ONE_SPRITE
     BNE .NewCone_Loop
     RTS
 ;----------------------------------------
-UpdateObstaclePositions:
-    LDX #3
+Update_Obstacle_X_Positions:
+    LDX #SPRITE_X
     LDY #0
 .Update_traffic_cones_Loop:
     LDA sprite_traffic_cones, X
@@ -55,7 +55,7 @@ UpdateObstaclePositions:
 .Update_traffic_cones_End:
     RTS
 ;----------------------------------------
-UpdateSpeed:
+Update_Speed:
     ; First update 16 bit forward_speed
     LDA forward_speed
     CLC
@@ -83,10 +83,10 @@ UpdateSpeed:
 .UpdateSpeed_End:
     RTS
 ;----------------------------------------
-UpdateGravity:
+Update_Gravity:
     LDA sprite_player + SPRITE_Y    ; Get the current vertical position of the first tile
     CLC
-    ADC #24                         ; Y offset of three tiles to find the bottom.y of player
+    ADC #PLAYER_PIXEL_HEIGHT        ; Y offset of three tiles to find the bottom.y of player
     CLC
     CMP #SCREEN_BOTTOM_Y            ; Compare to floor height
     BCS UpdatePlayer_Grounded
@@ -155,40 +155,39 @@ UpdatePlayer_SetGroundedAnim:
 ;
 ; Execution time is an average of 125 cycles (excluding jsr and rts)
 prng:
-	LDX #8     ; iteration count (generates 8 bits)
+	LDX #8              ; iteration count (generates 8 bits)
 	LDA seed+0
 prng_1:
-	ASL A       ; shift the register
+	ASL A               ; shift the register
 	ROL seed+1
 	BCC prng_2
-	EOR #$2D   ; apply XOR feedback whenever a 1 bit is shifted out
+	EOR #$2D            ; apply XOR feedback whenever a 1 bit is shifted out
 prng_2:
 	DEX
 	BNE prng_1
 	STA seed+0
-	CMP #0     ; reload flags
+	CMP #0              ; reload flags
 	RTS
 ;----------------------------------------
-GenerateGameBackgroundColumn:
-    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1 ; Also set the nametable?
-    LDA #%00000100
-    STA PPUCTRL ; Have to restore back to previous values later
+GenerateGameBackground_Column:
+    LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
+    STA PPUCTRL         ; Have to restore back to previous values later
 
     LDA current_nametable_generating
     STA PPUADDR
     LDA generate_x
     STA PPUADDR
 
-    LDX #26     ; 30 rows = 26 empty + 1 floor + 3 bricks underground
-    LDA #$00    ; Location of an empty tile in the sprite sheet
+    LDX #26             ; 30 rows = 26 empty + 1 floor + 3 bricks underground
+    LDA #$00            ; Location of an empty tile in the sprite sheet
 .GenerateEmptyTile:
     STA PPUDATA
     DEX
     BNE .GenerateEmptyTile
-    LDA #$F0    ; Floor
+    LDA #$F0            ; Floor
     STA PPUDATA
     LDX #3
-    LDA #$F2    ; Underground
+    LDA #$F2            ; Underground
     CLC
 .GenerateBricks:
     STA PPUDATA
@@ -204,28 +203,29 @@ GenerateGameBackgroundColumn:
     STA PPUCTRL
     RTS
 ;----------------------------------------
-GenerateGameBackgroundColumnWithLedge:
-    ; PPUCTRL flag. Put PPU into skip 32 mode instead of 1 ; Also set the nametable?
-    LDA #%00000100
-    STA PPUCTRL ; Have to restore back to previous values later
+GenerateGameBackground_ColumnWithLedge:
+    ; PPUCTRL flag. 
+    LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
+    STA PPUCTRL         ; Have to restore back to previous values later
 
+    ; Set the PPUADDR as the preset variable, and offset into by the generate_x that increments with each generation
     LDA current_nametable_generating
     STA PPUADDR
     LDA generate_x
     STA PPUADDR
 
-    LDX #25     ; 30 rows = 26 empty + 1 floor + 3 bricks underground
-    LDA #$00    ; Location of an empty tile in the sprite sheet
+    LDX #25             ; 30 rows = 25 empty + 1 ledge + 1 floor + 3 bricks underground
+    LDA #$00            ; Location of an empty tile in the sprite sheet
 .GenerateEmptyTile:
     STA PPUDATA
     DEX
     BNE .GenerateEmptyTile
-    LDA #$F0    ; Ledge
+    LDA #$F0            ; Load one tile of ledge
     STA PPUDATA
-    LDA #$F0    ; Floor
+    LDA #$F0            ; Load one tile of floor
     STA PPUDATA
-    LDX #3
-    LDA #$F2    ; Underground
+    LDX #3              ; Load three tiles of underground
+    LDA #$F2            ; Underground tile location
     CLC
 .GenerateBricks:
     STA PPUDATA
@@ -244,15 +244,15 @@ GenerateGameBackgroundColumnWithLedge:
 Title_FlashMessage:
     LDX title_screen_flash_timer
     INX
-    CPX #10; ANIM_FRAME_CHANGE_TIME*2  ; reuse the variable
+    CPX #FLASH_FRAME_CHANGE_TIME
     BEQ .ChangeVisability
     STX title_screen_flash_timer
     RTS
 .ChangeVisability:
-    LDX #22
+    LDX #WHITE_BLANK_BOX_DB_LENGTH + SPRITE_ATTRIB
 .ChangeNextTile:
     LDA sprite_text_blanking_box_white, X
-    EOR #%00100000
+    EOR #%00100000                  ; Flip the sprite priority to change visibility
     STA sprite_text_blanking_box_white, X
     DEX
     DEX

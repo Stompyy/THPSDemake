@@ -1,4 +1,6 @@
 ;----------------------------------------
+;;;;;;;----------SPRITES----------;;;;;;;
+;----------------------------------------
     ; y,  tile,  attrib, x
 obstacle_offscreen_traffic_cone_info:
     .db $C7, $F1, $00, $EE
@@ -23,4 +25,5 @@ whiteBlankBoxDB:
 TRAFFIC_CONE_DB_LENGTH      = 4
 PLAYER_SPRITE_DB_LENGTH     = 24
 WHITE_BLANK_BOX_DB_LENGTH   = 20
+LENGTH_OF_ONE_SPRITE        = 4
 ;----------------------------------------

@@ -1,27 +1,28 @@
-
 ;----------------------------------------
-;;;;;;;----MACROS----;;;;;;
+;;;;;;;-----------MACROS----------;;;;;;;
 ;----------------------------------------
 Player_Move .macro
+; parameters: 
 ; @Param \1 move amount
 ; @Param \2 move axis
-    LDX #20
+; Loop through each tile, altering the move axis by the move amount
+    LDX #PLAYER_SPRITE_DB_LENGTH - LENGTH_OF_ONE_SPRITE     ; Start the offset at the start of the last sprite
 .MoveEachTile_loop:
     LDA sprite_player + \1, X
     CLC
     ADC \2
     STA sprite_player + \1, X
     SEC
+    DEX                     ; Step to the next tile
     DEX
     DEX
     DEX
-    DEX
-    BMI .done
-    JMP .MoveEachTile_loop
+    BMI .done               ; If X falls below 0 then the minus flag will be set
+    JMP .MoveEachTile_loop  ; Else repeat for next tile
 .done
     .endm
 ;----------------------------------------
-
+; Courtesy of the live coding instruction videos supplied with the course materials
 CheckCollisionWithCone .macro  
 ; parameters: 
 ; \1 object_x
@@ -71,9 +72,10 @@ CheckCollisionWithCone .macro
     .endm
 ;----------------------------------------
 Animation_SetUp .macro
+; parameters: 
 ; @Param \1 Anim offset into animation .db memory
 ; @Param \2 Total anim tiles for that anim sequence
-    LDA #1
+    LDA #TRUE
     STA is_animating
     LDA \1
     STA current_animation_starting_anim_offset
@@ -85,42 +87,31 @@ Animation_SetUp .macro
     STA running_tile_count
     .endm
 ;----------------------------------------
-Player_Set_Position .macro
+Player_Set_Y_Position .macro
+; parameters: 
 ; @Param \1 Y position
     LDX #0
     LDY #0
     LDA \1
     SEC
-    SBC #23
-.MoveEachTile_loop2\@:
-    STA sprite_player + SPRITE_Y, X
-
+    SBC #PLAYER_PIXEL_HEIGHT - 1    ; We start at the top of the player_sprite. -1 to align the sprite with the floor tile
+.MoveEachTile_loop\@:               ; This \@ symbol is replaced with a individual marker to allow multiple replications of the macro without cross calling labels
+    STA sprite_player + SPRITE_Y, X ; Overwrite the value for each tile + SPRITE_Y
+    INX                             ; X+=4 to look at the tile to the side of the previous one
     INX
     INX
     INX
-    INX
-
-    STA sprite_player + SPRITE_Y, X
-
-    CPY #16
-    BEQ .done2\@
-
+    STA sprite_player + SPRITE_Y, X ; Overwrite the value for this tile + SPRITE_Y as well
+    CPY #PLAYER_TILE_HEIGHT - 1     ; Have we just looked at the last row? Starting tile + 2 tiles = 3 tiles tall
+    BEQ .done\@
     CLC
-    ADC #8
-
+    ADC #TILE_SIZE
+    INX                             ; X+=4 to look at the next tile
     INX
     INX
     INX
-    INX
-
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    JMP .MoveEachTile_loop2\@
-.done2\@:
+    INY                             ; Increment the tile height count
+    JMP .MoveEachTile_loop\@
+.done\@:
     .endm
+;----------------------------------------

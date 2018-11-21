@@ -31,13 +31,14 @@ NMI_ShowPreGame:
     RTI
 ;----------------------------------------
 NMI_State_PlayGame:
+    ; Main update subroutine
     JSR UpdateGame
+
     ; Push sprite data every frame in gameplay
     LDA #0
     STA OAMADDR
     LDA #$02            ; Location of the sprites In memory
     STA OAMDMA
-
     LDA scroll_page
     ORA #%10000000      ; first sprite sheet pattern table for sprites and background
     STA PPUCTRL

@@ -1,8 +1,10 @@
-
+;----------------------------------------
+;;;;;;;---------VARIABLES---------;;;;;;;
+;----------------------------------------
 PPUCTRL     = $2000
 PPUMASK     = $2001
 PPUSTATUS   = $2002
-OAMADDR     = $2003     ; Objective attribute memory
+OAMADDR     = $2003
 OAMDATA     = $2004
 PPUSCROLL   = $2005
 PPUADDR     = $2006
@@ -39,19 +41,23 @@ IS_PERFORMING_TRICK = %00001000
 IS_GRINDING         = %00010000
 
 ; For bool checking in a nice readable manner
-TRUE                = 1
-FALSE               = 0
+TRUE                        = 1
+FALSE                       = 0
+
+TILE_SIZE                   = 8
+PLAYER_TILE_HEIGHT          = 3
+PLAYER_PIXEL_HEIGHT         = TILE_SIZE * PLAYER_TILE_HEIGHT 
 
 MOVEMENT_SPEED              = 1
-ANIM_FRAME_CHANGE_TIME      = 8
+FLASH_FRAME_CHANGE_TIME     = 10
 TRAFFIC_CONE_WIDTH          = 8
 
 SCREEN_BOTTOM_Y             = 206
-
 NUMBER_OF_TILES_PER_ROW     = 32
 
-GRIND_HEIGHT                = SCREEN_BOTTOM_Y - 7
-GRIND_THRESHOLD             = GRIND_HEIGHT - 6  ; trigger the grind a bit above the grind height to keep player sprite head level
+GRIND_HEIGHT                = SCREEN_BOTTOM_Y - 7   ; Grind height is 1 pixel less than a full grid piece above to allow a slight overlap
+                                                    ; for grind sprites (see front wheel on crooked grind)
+GRIND_THRESHOLD             = GRIND_HEIGHT - 6      ; Trigger the grind a bit above the grind height to keep player sprite head level
 
 START_OF_LEDGE_MARKER_SCROLL    = $D9
 START_OF_LEDGE_MARKER_PAGE      = 0
@@ -70,22 +76,19 @@ NUMBER_OF_TRAFFIC_CONES     = 1
 TRAFFIC_CONE_HITBOX_HEIGHT  = 8
 TRAFFIC_CONE_HITBOX_WIDTH   = 8
 
-
-
 ;----------------------------------------
 ;;; All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
-joypad1_state                   .rs 1
+joypad1_state                           .rs 1
 
-current_animation_start_tile    .rs 1
-running_tile_count              .rs 1
-target_tile_count               .rs 1
+current_animation_start_tile            .rs 1
+running_tile_count                      .rs 1
+target_tile_count                       .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
-animation_frame_timer           .rs 1
+animation_frame_timer                   .rs 1
 
-; Consider having all these single bit bools kept in one player_state byte.
-; Can use AND or CMP >= (or combination) to check is_grounded etc
-player_state                    .rs 1
+; Consider having all these single bit bools kept in one player_state byte
+player_state                            .rs 1
 ; 76543210
 ; |||||||+-- is animating
 ; ||||||+--- is grounded
@@ -103,13 +106,13 @@ player_state                    .rs 1
 ;   LDA player_state SEC SBC #flag                  (to remove the '1-bit' in flag in player_state. Bit should be present before trying to remove)
 ;----------------------------------------
 
-is_animating                    .rs 1
-is_grounded                     .rs 1
-is_fakie                        .rs 1
-is_grinding                     .rs 1
-is_performing_trick             .rs 1
-is_konami_god_mode              .rs 1
-;is_title_screen                 .rs 1
+is_animating                    .rs 1   ; Should animations be updated
+is_grounded                     .rs 1   ; Is the player on the ground
+is_fakie                        .rs 1   ; Riding backwards e.g. after a 180 trick
+is_grinding                     .rs 1   ; Is grinding the ledge
+is_performing_trick             .rs 1   ; One trick at a time fellas
+is_konami_god_mode              .rs 1   ; If there was enough time to implement this...
+
 gameStateMachine                .rs 1   ; 0 is title screen
                                         ; 1 is controls screen
                                         ; 2 is pre game
@@ -137,8 +140,7 @@ background_load_current_Y       .rs 1
 konami_code_running_check       .rs 1
 konami_current_press_checked    .rs 1
 
-generate_game_background_row_counter .rs 1
-should_generate_game_background .rs 1
+;should_generate_game_background .rs 1
 current_nametable_generating    .rs 1
 
 title_screen_flash_timer        .rs 1   ; The running timer for the "press start" flashing message on the title screen
@@ -151,7 +153,8 @@ sprite_text_blanking_box_white  .rs 4 * 5
 
 ; Sprite information
     .rsset $0000
-SPRITE_Y            .rs 1
-SPRITE_TILE         .rs 1
-SPRITE_ATTRIB       .rs 1
-SPRITE_X            .rs 1
+SPRITE_Y                        .rs 1
+SPRITE_TILE                     .rs 1
+SPRITE_ATTRIB                   .rs 1
+SPRITE_X                        .rs 1
+;----------------------------------------

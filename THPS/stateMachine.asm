@@ -1,3 +1,6 @@
+;----------------------------------------
+;;;;;;;-------STATE-MACHINE-------;;;;;;;
+;----------------------------------------
 GAMESTATE_TITLE             = 0
 GAMESTATE_CONTROLS          = 1
 GAMESTATE_PREGAME           = 2
@@ -25,7 +28,7 @@ CheckStateMachine:
 NMI_State_TitleScreen:
 ; In Title screen controls
     ; React to start button
-    JSR CheckControls
+    JSR Check_Controls
     LDA joypad1_state
     AND #BUTTON_START
     BNE .InitControlScreen
@@ -52,15 +55,15 @@ NMI_State_ControlScreen:
     ; The player is expected to spend much more than 32 frames in each state, so we take
     ; advantage of this time to do this generation gradually and safely
     LDX background_load_counter
-    CPX #32
+    CPX #NUMBER_OF_TILES_PER_ROW
     BEQ .CheckForControls               ; Nametable is fully loaded so check for exit controls
     INX
     STX background_load_counter
-    JSR GenerateGameBackgroundColumn    ; Generate a new background column
+    JSR GenerateGameBackground_Column   ; Generate a new background column
     JMP NMI_ShowControlsPage            ; Continue to show the control screen
 ; Check for an A button press (this is indicated in the control screen to continue)
 .CheckForControls:
-    JSR CheckControls
+    JSR Check_Controls
     LDA joypad1_state
     AND #BUTTON_A
     BNE .A_button_pressed
@@ -75,14 +78,14 @@ NMI_State_ControlScreen:
     STA gameStateMachine
 
     ; Load attribute data that each 16 x 16 uses
-    LDA #$23        ; Write address $23C0 to PPUADDR register
-    STA PPUADDR     ; PPUADDR is big endian for some reason??
+    LDA #$23                            ; Write address $23C0 to PPUADDR register
+    STA PPUADDR                         ; PPUADDR is big endian for some reason??
     LDA #$C0
     CLC
-    ADC #46         ; Only bother changing the floor bit
+    ADC #46                             ; Only bother changing the floor bit
     STA PPUADDR
 
-    LDA #%01010101  ; set all (attribute table?) to first colour palette
+    LDA #%01010101                      ; set all (attribute table?) to first colour palette
     LDX #18
 .LoadAttributes_Loop:
     STA PPUDATA
@@ -97,7 +100,7 @@ NMI_State_ControlScreen:
     ADC #48
     STA PPUADDR
 
-    LDA #%01011010  ; For the ledge palette
+    LDA #%01011010                      ; For the ledge palette
     LDX #8
 .LoadAttributes2_Loop:
     STA PPUDATA
@@ -116,13 +119,13 @@ NMI_State_ControlScreen:
 NMI_State_PreGame:
 
     LDX background_load_counter
-    CPX #32
+    CPX #NUMBER_OF_TILES_PER_ROW
     BNE .MoreColumnsNeeded
     JMP InitGame
 .MoreColumnsNeeded:
     INX
     STX background_load_counter
-    JSR GenerateGameBackgroundColumnWithLedge
+    JSR GenerateGameBackground_ColumnWithLedge
     JMP NMI_ShowPreGame
 ;----------------------------------------
 InitGame:
@@ -132,7 +135,7 @@ InitGame:
     LDA playerSpritesDB, X
     STA sprite_player, X
     INX
-    CPX #24  ; Just one (8x8 * 6) sprite loading. NumSprites * 4
+    CPX #PLAYER_SPRITE_DB_LENGTH
     BNE .LoadPlayerSprite_Next  
 
     LDA #GAMESTATE_PLAY

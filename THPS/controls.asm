@@ -1,23 +1,26 @@
+;----------------------------------------
+;;;;;;;---------------------------;;;;;;;
+;----------------------------------------
 UpdateGame:
-    JSR CheckControls
+    JSR Check_Controls
     ; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x
     CLC
     ADC delta_X
     STA scroll_x
-    STA PPUSCROLL       ; x scroll
-    BCC .Scroll_NoWrap   ; If carry flag is set so has overflowed over 255
+    STA PPUSCROLL           ; x scroll
+    BCC .Scroll_NoWrap      ; If carry flag is set so has overflowed over 255
 
     ; scroll_x has wrapped, so switch scroll_page
     LDA scroll_page
-    EOR #1  ; ExcusiveOr (if ==1 then =0, else if ==0 then =1)
+    EOR #1                  ; ExcusiveOr (if ==1 then =0, else if ==0 then =1)
     STA scroll_page
-    ORA #%10000000      ; orIn, sets the normal PPUCTRL value set in init that allows NMI scrolling
+    ORA #%10000000          ; orIn, sets the normal PPUCTRL value set in init that allows NMI scrolling
     STA PPUCTRL
 
 .Scroll_NoWrap:
     LDA #0
-    STA PPUSCROLL   ; y scroll
+    STA PPUSCROLL           ; y scroll
 
     LDA is_grinding
     CMP #FALSE
@@ -55,7 +58,7 @@ ReadB_Done:
     LDA joypad1_state
     AND #BUTTON_LEFT
     BEQ ReadLeft_Done
-    LDA is_animating        ; If already animating skip to the end
+    LDA is_animating            ; If already animating skip to the end
     CMP #TRUE
     BEQ ReadLeft_Done
     LDA is_grounded
@@ -65,7 +68,7 @@ ReadB_Done:
     Animation_SetUp #ANIM_OFFSET_BSFLIP, #TOTAL_ANIM_TILES_BSFLIP
     LDA #TRUE
     STA is_performing_trick
-    STA is_fakie    ; To tell the landing animation which anim to use
+    STA is_fakie                ; To tell the landing animation which anim to use
     JMP ReadLeft_Done
 .DoTrick_Brake
     Animation_SetUp #ANIM_OFFSET_BRAKE, #TOTAL_ANIM_TILES_BRAKE
@@ -163,12 +166,11 @@ ReadDown_Done:
     Animation_SetUp #ANIM_OFFSET_BS180, #TOTAL_ANIM_TILES_BS180
     LDA #TRUE
     ;STA is_performing_trick ; disable to let player slide the trick around in last second without falling
-    STA is_fakie    ; To tell the landing animation which anim to use
+    STA is_fakie                ; To tell the landing animation which anim to use
 ReadA_Done:
 
 ReadControls_Done:
-   ; LDX #0
-    CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #24, #20, #2, #2, NoCollisionWithCone 
+    CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #PLAYER_PIXEL_HEIGHT, #20, #2, #2, NoCollisionWithCone 
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
 NoCollisionWithCone:
 
@@ -183,12 +185,12 @@ WaitingForGrind:
     LDA is_grinding
     CMP #TRUE
     BEQ .SkipGravityAndSpeed
-    JSR UpdateGravity
-    JSR UpdateSpeed
+    JSR Update_Gravity
+    JSR Update_Speed
     JMP .GrindChecksDone
 .SkipGravityAndSpeed:
 
-    LDA joypad1_state       ; Check for ollie off the ledge
+    LDA joypad1_state           ; Check for ollie off the ledge
     AND #BUTTON_A
     BEQ .GrindChecksDone
     LDA #FALSE
@@ -203,13 +205,8 @@ WaitingForGrind:
 
 .GrindChecksDone:
 
-    JSR UpdateObstaclePositions
+    JSR Update_Obstacle_X_Positions
 
-    ; Temp just skips the grinding wip
-  ;  JMP .PlayerNotGrindingLedge
-    
-
-    
     LDA is_grounded
     CMP #FALSE
     BEQ .CheckForGrind
@@ -222,13 +219,13 @@ WaitingForGrind:
     BEQ .JumpToPlayerNotGrindingLedge
     LDA sprite_player + SPRITE_Y    ; Get the current vertical position of the first tile
     CLC
-    ADC #24                         ; Y offset of three tiles to find the bottom.y of player
+    ADC #PLAYER_PIXEL_HEIGHT        ; Y offset of three tiles to find the bottom.y of player
     CLC
     CMP #GRIND_THRESHOLD            ; Compare to threshold height
     BNE .JumpToPlayerNotGrindingLedge
 
     LDA scroll_page
-    CMP #0      ; are we on the first nametable page or not?
+    CMP #0                          ; are we on the first nametable page or not?
     BNE .CheckSecondPageLedgePlacement
     LDA scroll_x
     CLC
@@ -275,7 +272,7 @@ WaitingForGrind:
 .PlayerNotSpecialGrind:
     Animation_SetUp #ANIM_OFFSET_5050, #TOTAL_ANIM_TILES_5050
 .PlayerSetGrindHeight:
-    Player_Set_Position #GRIND_HEIGHT
+    Player_Set_Y_Position #GRIND_HEIGHT
     JMP .SkipGravityAndSpeed
 .PlayerNotGrindingLedge:
 
@@ -288,6 +285,6 @@ WaitingForGrind:
     LDA is_grounded
     CMP #TRUE
     BNE .SkipPlayerForceGroundedPosition
-    Player_Set_Position #SCREEN_BOTTOM_Y    ; Have to force the Y pos sometimes? gravity stuff
+    Player_Set_Y_Position #SCREEN_BOTTOM_Y    ; Have to force the Y pos sometimes. gravity stuff
 .SkipPlayerForceGroundedPosition:
     RTS

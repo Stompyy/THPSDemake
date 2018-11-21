@@ -1,8 +1,11 @@
+;----------------------------------------
+;;;;;;;-------INITIALISATION------;;;;;;;
+;----------------------------------------
 InitialiseGame:
     ; Clear out the sprite data if returning from a reset
     LDA #0
     STA OAMADDR
-    LDA #$0
+    LDA #0
     STA OAMDMA
 
     ; Seed the random number generator
@@ -61,7 +64,7 @@ InitialiseGame:
     STA OAMDMA
 
 ; Other sprites
-    JSR LoadNewTrafficCone
+    JSR Load_New_Traffic_Cone
 
 ; Attribute data tables
     ; Load attribute data that each 16 x 16 uses
@@ -89,11 +92,9 @@ InitialiseGame:
     DEX
     BNE .LoadAttributes2_Loop
 
-    ; Set the true bools for gameplay
+    ; The default starting state for the player
     LDA #TRUE
     STA is_grounded
-    ;STA is_title_screen
-    STA should_generate_game_background
     
     ; Initalise state machine to the title screen
     LDA #GAMESTATE_TITLE
