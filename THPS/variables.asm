@@ -1,6 +1,8 @@
 ;----------------------------------------
 ;;;;;;;---------VARIABLES---------;;;;;;;
 ;----------------------------------------
+;;; CONSTANTS
+;----------------------------------------
 PPUCTRL     = $2000
 PPUMASK     = $2001
 PPUSTATUS   = $2002
@@ -40,44 +42,44 @@ IS_FAKIE            = %00000100
 IS_PERFORMING_TRICK = %00001000
 IS_GRINDING         = %00010000
 
-; For bool checking in a nice readable manner
-TRUE                        = 1
-FALSE                       = 0
+; For bool checking in a readable way
+TRUE                            = 1
+FALSE                           = 0
 
-TILE_SIZE                   = 8
-PLAYER_TILE_HEIGHT          = 3
-PLAYER_PIXEL_HEIGHT         = TILE_SIZE * PLAYER_TILE_HEIGHT 
+TILE_SIZE                       = 8
+PLAYER_TILE_HEIGHT              = 3
+PLAYER_PIXEL_HEIGHT             = TILE_SIZE * PLAYER_TILE_HEIGHT 
 
-MOVEMENT_SPEED              = 1
-FLASH_FRAME_CHANGE_TIME     = 10
-TRAFFIC_CONE_WIDTH          = 8
+MOVEMENT_SPEED                  = 1
+FLASH_FRAME_CHANGE_TIME         = 10        ; The number of frames for the flashing 'press start' message to take before changing
+TRAFFIC_CONE_WIDTH              = 8
 
-SCREEN_BOTTOM_Y             = 206
-NUMBER_OF_TILES_PER_ROW     = 32
+SCREEN_BOTTOM_Y                 = 206       ; the player_sprite grounded height
+NUMBER_OF_TILES_PER_ROW         = 32
 
-GRIND_HEIGHT                = SCREEN_BOTTOM_Y - 7   ; Grind height is 1 pixel less than a full grid piece above to allow a slight overlap
-                                                    ; for grind sprites (see front wheel on crooked grind)
-GRIND_THRESHOLD             = GRIND_HEIGHT - 6      ; Trigger the grind a bit above the grind height to keep player sprite head level
+GRIND_HEIGHT                    = SCREEN_BOTTOM_Y - 7   ; Grind height is 1 pixel less than a full grid piece above to allow a slight overlap
+                                                        ; for grind sprites (see front wheel on crooked grind)
+GRIND_THRESHOLD                 = GRIND_HEIGHT - 6      ; Trigger the grind a bit above the grind height to keep player sprite head level
 
-START_OF_LEDGE_MARKER_SCROLL    = $D9
-START_OF_LEDGE_MARKER_PAGE      = 0
-END_OF_LEDGE_MARKER_SCROLL      = $D1
-END_OF_LEDGE_MARKER_PAGE        = 1
+START_OF_LEDGE_MARKER_SCROLL    = $D9       ; The scroll_x value at which the player_sprite is at the start of the ledge
+START_OF_LEDGE_MARKER_PAGE      = 0         ; The scroll_page value at which the player_sprite is at the start of the ledge
+END_OF_LEDGE_MARKER_SCROLL      = $D1       ; The scroll_x value at which the player_sprite is at the end of the ledge
+END_OF_LEDGE_MARKER_PAGE        = 1         ; The scroll_page value at which the player_sprite is at the end of the ledge
 
-GRAVITY                     = 10        ; In subpixels/frame^2
-JUMP_FORCE                  = -400      ; In subpixels/frame
-KONAMI_JUMP_FORCE           = JUMP_FORCE * 2
+GRAVITY                         = 10        ; In subpixels/frame^2
+JUMP_FORCE                      = -400      ; In subpixels/frame
+;KONAMI_JUMP_FORCE               = JUMP_FORCE * 2
 
-FRICTION                    = -2
-PUSH_FORCE                  = 650       ; In subpixels/frame
-BRAKE_FORCE                 = 250       ; In subpixels/frame
+FRICTION                        = -2
+PUSH_FORCE                      = 650       ; In subpixels/frame
+BRAKE_FORCE                     = 250       ; In subpixels/frame
 
-NUMBER_OF_TRAFFIC_CONES     = 1
-TRAFFIC_CONE_HITBOX_HEIGHT  = 8
-TRAFFIC_CONE_HITBOX_WIDTH   = 8
+NUMBER_OF_TRAFFIC_CONES         = 1
+TRAFFIC_CONE_HITBOX_HEIGHT      = 8
+TRAFFIC_CONE_HITBOX_WIDTH       = 8
 
 ;----------------------------------------
-;;; All get initialised to zero
+;;; Variables. All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
 joypad1_state                           .rs 1
 
@@ -86,6 +88,8 @@ running_tile_count                      .rs 1
 target_tile_count                       .rs 1
 current_animation_starting_anim_offset  .rs 1   ; 8-bit binary number fine if all animations are less than 255 frames in total
 animation_frame_timer                   .rs 1
+
+title_screen_flash_timer                .rs 1   ; The running timer for the "press start" flashing message on the title screen
 
 ; Consider having all these single bit bools kept in one player_state byte
 player_state                            .rs 1
@@ -111,7 +115,7 @@ is_grounded                     .rs 1   ; Is the player on the ground
 is_fakie                        .rs 1   ; Riding backwards e.g. after a 180 trick
 is_grinding                     .rs 1   ; Is grinding the ledge
 is_performing_trick             .rs 1   ; One trick at a time fellas
-is_konami_god_mode              .rs 1   ; If there was enough time to implement this...
+;is_konami_god_mode              .rs 1   ; If there was enough time to implement this...
 
 gameStateMachine                .rs 1   ; 0 is title screen
                                         ; 1 is controls screen
@@ -133,24 +137,21 @@ scroll_page                     .rs 1   ; the current nametable page
 seed                            .rs 2
 generate_x                      .rs 1   ; The background column being generated
 
+current_nametable_generating    .rs 1   ; Keeps track of which nametable we are currently generatng a background for
 background_load_counter         .rs 1   ; Counters and targets for loading in the title and control screen backgrounds
 background_load_target          .rs 1
 background_load_current_Y       .rs 1
 
-konami_code_running_check       .rs 1
-konami_current_press_checked    .rs 1
+;konami_code_running_check       .rs 1
+;konami_current_press_checked    .rs 1
 
-;should_generate_game_background .rs 1
-current_nametable_generating    .rs 1
-
-title_screen_flash_timer        .rs 1   ; The running timer for the "press start" flashing message on the title screen
-
+;----------------------------------------
 ; Store all sprites together at $0200
     .rsset $0200
 sprite_player                   .rs 4 * 6
 sprite_traffic_cones            .rs 4 * NUMBER_OF_TRAFFIC_CONES
 sprite_text_blanking_box_white  .rs 4 * 5
-
+;----------------------------------------
 ; Sprite information
     .rsset $0000
 SPRITE_Y                        .rs 1

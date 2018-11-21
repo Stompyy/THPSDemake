@@ -137,6 +137,9 @@ InitGame:
     INX
     CPX #PLAYER_SPRITE_DB_LENGTH
     BNE .LoadPlayerSprite_Next  
+    
+    ; Other sprites
+    JSR Load_New_Traffic_Cone
 
     LDA #GAMESTATE_PLAY
     STA gameStateMachine

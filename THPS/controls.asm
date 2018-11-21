@@ -2,7 +2,9 @@
 ;;;;;;;---------------------------;;;;;;;
 ;----------------------------------------
 UpdateGame:
+    ; Update the joypad1_state
     JSR Check_Controls
+
     ; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x
     CLC
@@ -13,26 +15,27 @@ UpdateGame:
 
     ; scroll_x has wrapped, so switch scroll_page
     LDA scroll_page
-    EOR #1                  ; ExcusiveOr (if ==1 then =0, else if ==0 then =1)
+    EOR #1                  ; Excusive or (if ==1 then =0, else if ==0 then =1)
     STA scroll_page
-    ORA #%10000000          ; orIn, sets the normal PPUCTRL value set in init that allows NMI scrolling
+    ORA #%10000000          ; Or inclusive, sets NMI scrolling
     STA PPUCTRL
 
 .Scroll_NoWrap:
     LDA #0
     STA PPUSCROLL           ; y scroll
 
+    ; If is grinding, then skip past the standard controls
     LDA is_grinding
     CMP #FALSE
-    BEQ .CheckRegularControls
+    BEQ .Controls_Parse
     JMP ReadControls_Done
 
-.CheckRegularControls:
+.Controls_Parse:
     ; React to B button
     LDA joypad1_state
     AND #BUTTON_B
     BEQ ReadB_Done
-    LDA is_animating
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadB_Done
     LDA is_grounded
@@ -58,7 +61,7 @@ ReadB_Done:
     LDA joypad1_state
     AND #BUTTON_LEFT
     BEQ ReadLeft_Done
-    LDA is_animating            ; If already animating skip to the end
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadLeft_Done
     LDA is_grounded
@@ -82,7 +85,7 @@ ReadLeft_Done:
     LDA joypad1_state
     AND #BUTTON_RIGHT
     BEQ ReadRight_Done
-    LDA is_animating
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadRight_Done
     LDA is_grounded
@@ -105,7 +108,7 @@ ReadRight_Done:
     LDA joypad1_state
     AND #BUTTON_UP
     BEQ ReadUp_Done
-    LDA is_animating
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadUp_Done
     LDA is_grounded
@@ -124,7 +127,7 @@ ReadUp_Done:
     LDA joypad1_state
     AND #BUTTON_DOWN
     BEQ ReadDown_Done
-    LDA is_animating
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadDown_Done
     LDA is_grounded
@@ -142,10 +145,10 @@ ReadDown_Done:
     ; React to A button
     LDA joypad1_state
     AND #BUTTON_A
-    BEQ ReadA_Done
-    LDA is_animating
+    BEQ ReadControls_Done
+    LDA is_animating        ; Check if is animating
     CMP #TRUE
-    BEQ ReadA_Done
+    BEQ ReadControls_Done
     LDA is_grounded
     CMP #FALSE
     BEQ .DoTrick_BS180
@@ -161,16 +164,18 @@ ReadDown_Done:
     ; Change bool
     LDA #FALSE
     STA is_grounded
-    JMP ReadA_Done
+    JMP ReadControls_Done
 .DoTrick_BS180:
     Animation_SetUp #ANIM_OFFSET_BS180, #TOTAL_ANIM_TILES_BS180
     LDA #TRUE
     ;STA is_performing_trick ; disable to let player slide the trick around in last second without falling
     STA is_fakie                ; To tell the landing animation which anim to use
-ReadA_Done:
-
+    
 ReadControls_Done:
+
+    ; Check collision with traffic cones
     CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #PLAYER_PIXEL_HEIGHT, #20, #2, #2, NoCollisionWithCone 
+    ; If collided, then set fall anim
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
 NoCollisionWithCone:
 
@@ -276,7 +281,7 @@ WaitingForGrind:
     JMP .SkipGravityAndSpeed
 .PlayerNotGrindingLedge:
 
-    LDA is_animating
+    LDA is_animating                        ; Check if is animating
     CMP #FALSE
     BEQ .SkipAnimUpdate
     JSR UpdateAnimation
@@ -285,6 +290,6 @@ WaitingForGrind:
     LDA is_grounded
     CMP #TRUE
     BNE .SkipPlayerForceGroundedPosition
-    Player_Set_Y_Position #SCREEN_BOTTOM_Y    ; Have to force the Y pos sometimes. gravity stuff
+    Player_Set_Y_Position #SCREEN_BOTTOM_Y  ; Have to force the Y pos sometimes. gravity stuff
 .SkipPlayerForceGroundedPosition:
     RTS

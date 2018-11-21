@@ -63,9 +63,6 @@ InitialiseGame:
     LDA #$02    ; Location of the sprites In memory
     STA OAMDMA
 
-; Other sprites
-    JSR Load_New_Traffic_Cone
-
 ; Attribute data tables
     ; Load attribute data that each 16 x 16 uses
     LDA #$23        ; First nametable attribute table
