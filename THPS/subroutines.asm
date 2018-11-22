@@ -179,11 +179,14 @@ GenerateGameBackground_Column:
     LDA generate_x
     STA PPUADDR
 
-    LDX #26             ; 30 rows = 26 empty + 1 floor + 3 bricks underground
+    LDY #26             ; Use Y reg here as GetRandomTile clobbers X register
+                        ; 30 rows = 26 empty + 1 floor + 3 bricks underground
     LDA #$00            ; Location of an empty tile in the sprite sheet
 .GenerateEmptyTile:
+  ;  JSR GetRandomTile  ; This requires too much of the PPU.
+                        ; Interestingly only generates 14-15 tiles before NMI exits
     STA PPUDATA
-    DEX
+    DEY
     BNE .GenerateEmptyTile
     LDA #$F0            ; Floor
     STA PPUDATA
@@ -202,6 +205,17 @@ GenerateGameBackground_Column:
     STA PPUSCROLL
     LDA #%00000000
     STA PPUCTRL
+    RTS
+;----------------------------------------
+GetRandomTile:
+    JSR prng
+    CLC
+    CMP #128        ; weighting out of 0-255 of choice to get an empty tile. #128 is 0.5 chance of each tile
+    BCS .ReturnPositiveTile
+    LDA #$00
+    RTS
+.ReturnPositiveTile:
+    LDA #$6F
     RTS
 ;----------------------------------------
 GenerateGameBackground_ColumnWithLedge:
