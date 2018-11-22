@@ -223,11 +223,14 @@ GenerateGameBackground_Column:
     LDA #$00            ; Load in one row of blank to account for PAL displays
     STA PPUDATA
 
+    LDA #MAX_CLOUD_PROBABILITY  ; initialise the cloud probability to max value
+    STA cloud_probability
+
     LDY #8              ; Use Y reg here as GetRandomTile clobbers X register
                         ; Any more than 10 will take up too many CPU cycles
 .GenerateRandomClouds:  ; Load four tiles of randomly generated cloud tiles
-    JSR GetRandomTile   
-    STA PPUDATA
+    JSR GetRandomTile   ; Places the tile into the X register
+    STX PPUDATA
     DEY
     BNE .GenerateRandomClouds
 
@@ -273,11 +276,15 @@ GenerateGameBackground_ColumnWithLedge:
     LDA #$00            ; Load in one row of blank to account for PAL displays
     STA PPUDATA
 
+    LDA #MAX_CLOUD_PROBABILITY  ; initialise the cloud probability to max value
+    STA cloud_probability
+
     LDY #8              ; Use Y reg here as GetRandomTile clobbers X register
                         ; Any more than 10 will take up too many CPU cycles
+                        ; 8 is an effective amount for the desired effect
 .GenerateRandomClouds:  ; Load four tiles of randomly generated cloud tiles
-    JSR GetRandomTile   
-    STA PPUDATA
+    JSR GetRandomTile   ; Places the tile into the X register
+    STX PPUDATA
     DEY
     BNE .GenerateRandomClouds
 
@@ -308,14 +315,19 @@ GenerateGameBackground_ColumnWithLedge:
 ; Will use the pseudo random number generator to randomly choose an empty tile or a patterned tile based on weighting
 ; Store that tile address value into the A register
 GetRandomTile:
-    JSR prng        ; Clobbers X register. Fills A register with an 8 bit random number
+    JSR prng                ; Clobbers X register. Fills A register with an 8 bit random number
     CLC
-    CMP #CLOUD_PROBABILITY  ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
-    BCS .ReturnPositiveTile
-    LDA #$00        ; Location of empty tile
-    RTS
-.ReturnPositiveTile:
-    LDA #$6F        ; Location of cloud tile
+    CMP cloud_probability  ;#CLOUD_PROBABILITY  ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
+    BCS .ReturnEmptyTile
+    LDX #$6F                ; Location of cloud tile
+    JMP .DecreaseProbability
+.ReturnEmptyTile:
+    LDX #$00                ; Location of empty tile
+.DecreaseProbability:       ; Decrease the probability each iteration to blend clouds into background
+    LDA cloud_probability
+    SEC
+    SBC #CLOUD_PROBABILITY_DROP
+    STA cloud_probability
     RTS
 ;----------------------------------------
 ; Uses the white blanking box sprite to cover and reveal the title screen text, to seem to flash

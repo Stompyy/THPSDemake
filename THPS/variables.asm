@@ -52,6 +52,7 @@ PLAYER_PIXEL_HEIGHT             = TILE_SIZE * PLAYER_TILE_HEIGHT
 
 MOVEMENT_SPEED                  = 1
 FLASH_FRAME_CHANGE_TIME         = 10        ; The number of frames for the flashing 'press start' message to take before changing
+                                            ; Also used as a seed for the pseudo random number generator
 TRAFFIC_CONE_WIDTH              = 8
 
 SCREEN_BOTTOM_Y                 = 206       ; the player_sprite grounded height
@@ -80,8 +81,8 @@ TRAFFIC_CONE_HITBOX_WIDTH       = 8
 
 MAX_SCORE_NUMBER_BEFORE_WRAP    = 9         ; Loop back to zero after this number
 
-CLOUD_PROBABILITY               = 200       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
-
+MAX_CLOUD_PROBABILITY           = 125       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
+CLOUD_PROBABILITY_DROP          = 15
 ;----------------------------------------
 ;;; Variables. All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
@@ -141,6 +142,7 @@ scroll_page                     .rs 1   ; the current nametable page
 
 seed                            .rs 2   ; Seed of the pseudo random number generator
 generate_x                      .rs 1   ; The background column being generated
+cloud_probability               .rs 1   ; Used to update the cloud picking probabilty
 
 current_nametable_generating    .rs 1   ; Keeps track of which nametable we are currently generatng a background for
 background_load_counter         .rs 1   ; Counters and targets for loading in the title and control screen backgrounds
