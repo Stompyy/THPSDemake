@@ -81,8 +81,8 @@ TRAFFIC_CONE_HITBOX_WIDTH       = 8
 
 MAX_SCORE_NUMBER_BEFORE_WRAP    = 9         ; Loop back to zero after this number
 
-MAX_CLOUD_PROBABILITY           = 125       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
-CLOUD_PROBABILITY_DROP          = 15
+MAX_CLOUD_PROBABILITY           = 110       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
+CLOUD_PROBABILITY_DROP          = 15        ; grades from 110, 95, ... 20, 5. /255 chance
 ;----------------------------------------
 ;;; Variables. All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
