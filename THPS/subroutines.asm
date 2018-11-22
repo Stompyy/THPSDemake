@@ -30,7 +30,7 @@ Check_Controls:
 Load_New_Traffic_Cone:
     LDX #0
 .NewCone_Loop:
-    LDA obstacle_offscreen_traffic_cone_info, X
+    LDA trafficConeSprite, X
     STA sprite_traffic_cones, X
     INX
     CPX #LENGTH_OF_ONE_SPRITE
@@ -140,6 +140,7 @@ UpdatePlayer_SetGroundedAnim:
     RTS
 .UpdatePlayer_SetFallAnim:
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
+    JSR ResetScore
     RTS 
 ;----------------------------------------
 ; prng - http://wiki.nesdev.com/w/index.php/Random_number_generator
@@ -283,3 +284,26 @@ Grind_CheckForEndOfLedge:
     LDA #FALSE
     STA is_grinding
     RTS
+;----------------------------------------
+IncrementScore:
+    LDX score
+    CLC
+    CPX #MAX_SCORE_NUMBER_BEFORE_WRAP
+    BCS .setToZero
+    INX
+    JMP .changeSprite
+.setToZero:
+    LDX #0
+.changeSprite:
+    STX score
+    LDA numberSprites, X
+    STA sprite_score_number + SPRITE_TILE
+    RTS
+;----------------------------------------
+ResetScore:
+    LDX #0
+    STX score
+    LDA numberSprites, X
+    STA sprite_score_number + SPRITE_TILE
+    RTS
+;----------------------------------------

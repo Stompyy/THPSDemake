@@ -50,7 +50,7 @@ InitialiseGame:
     ; Load in the text blanking white rect that is used to make text flash
     LDX #0
 .LoadBlankSprite_Next:
-    LDA whiteBlankBoxDB, X
+    LDA whiteBlankBoxSprite, X
     STA sprite_text_blanking_box_white, X
     INX
     CPX #WHITE_BLANK_BOX_DB_LENGTH

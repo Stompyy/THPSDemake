@@ -69,6 +69,7 @@ ReadB_Done:
     BEQ .DoTrick_Brake
     ; Else do BSFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_BSFLIP, #TOTAL_ANIM_TILES_BSFLIP
+    JSR IncrementScore
     LDA #TRUE
     STA is_performing_trick
     STA is_fakie                ; To tell the landing animation which anim to use
@@ -93,6 +94,7 @@ ReadLeft_Done:
     BEQ .DoTrick_Push
     ; Else do KICKFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_KICKFLIP, #TOTAL_ANIM_TILES_KICKFLIP
+    JSR IncrementScore
     LDA #TRUE
     STA is_performing_trick
     JMP ReadRight_Done
@@ -116,6 +118,7 @@ ReadRight_Done:
     BEQ .DoTrick_NoseManual
     ; Else do POPSHUV if !is_grounded
     Animation_SetUp #ANIM_OFFSET_POPSHUV, #TOTAL_ANIM_TILES_POPSHUV
+    JSR IncrementScore
     LDA #TRUE
     STA is_performing_trick
     JMP ReadUp_Done
@@ -135,6 +138,7 @@ ReadUp_Done:
     BEQ .DoTrick_Manual
     ; Else do TREFLIP if !is_grounded
     Animation_SetUp #ANIM_OFFSET_TREFLIP, #TOTAL_ANIM_TILES_TREFLIP
+    JSR IncrementScore
     LDA #TRUE
     STA is_performing_trick
     JMP ReadDown_Done
@@ -167,6 +171,7 @@ ReadDown_Done:
     JMP ReadControls_Done
 .DoTrick_BS180:
     Animation_SetUp #ANIM_OFFSET_BS180, #TOTAL_ANIM_TILES_BS180
+    JSR IncrementScore
     LDA #TRUE
     ;STA is_performing_trick ; disable to let player slide the trick around in last second without falling
     STA is_fakie                ; To tell the landing animation which anim to use
@@ -177,6 +182,7 @@ ReadControls_Done:
     CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #PLAYER_PIXEL_HEIGHT, #20, #2, #2, NoCollisionWithCone 
     ; If collided, then set fall anim
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
+    JSR ResetScore
 NoCollisionWithCone:
 
     LDA is_grinding
@@ -278,6 +284,7 @@ WaitingForGrind:
     Animation_SetUp #ANIM_OFFSET_5050, #TOTAL_ANIM_TILES_5050
 .PlayerSetGrindHeight:
     Player_Set_Y_Position #GRIND_HEIGHT
+    JSR IncrementScore
     JMP .SkipGravityAndSpeed
 .PlayerNotGrindingLedge:
 

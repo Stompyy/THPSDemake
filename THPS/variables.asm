@@ -78,6 +78,9 @@ NUMBER_OF_TRAFFIC_CONES         = 1
 TRAFFIC_CONE_HITBOX_HEIGHT      = 8
 TRAFFIC_CONE_HITBOX_WIDTH       = 8
 
+NUMBERS                         = $F6
+MAX_SCORE_NUMBER_BEFORE_WRAP    = 9         ; Loop back to zero after this number
+
 ;----------------------------------------
 ;;; Variables. All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
@@ -116,6 +119,7 @@ is_fakie                        .rs 1   ; Riding backwards e.g. after a 180 tric
 is_grinding                     .rs 1   ; Is grinding the ledge
 is_performing_trick             .rs 1   ; One trick at a time fellas
 ;is_konami_god_mode              .rs 1   ; If there was enough time to implement this...
+score                           .rs 1
 
 gameStateMachine                .rs 1   ; 0 is title screen
                                         ; 1 is controls screen
@@ -151,6 +155,9 @@ background_load_current_Y       .rs 1
 sprite_player                   .rs 4 * 6
 sprite_traffic_cones            .rs 4 * NUMBER_OF_TRAFFIC_CONES
 sprite_text_blanking_box_white  .rs 4 * 5
+sprite_score_text               .rs 4 * 3   ; 3 sprites for the writing, 1 sprite for the number
+sprite_score_number             .rs 4       ; Keep these score references consecutive, as we load in 4 sprites sequentially on start
+                                            ; The number label is just a pointer to the last sprite location
 ;----------------------------------------
 ; Sprite information
     .rsset $0000

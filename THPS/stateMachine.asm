@@ -132,11 +132,20 @@ InitGame:
     ; Load the player sprite
     LDX #0
 .LoadPlayerSprite_Next:
-    LDA playerSpritesDB, X
+    LDA playerSprite, X
     STA sprite_player, X
     INX
     CPX #PLAYER_SPRITE_DB_LENGTH
     BNE .LoadPlayerSprite_Next  
+    
+    ; Load the score sprite
+    LDX #0
+.LoadScoreSprite_Next:
+    LDA ScoreSprite, X
+    STA sprite_score_text, X
+    INX
+    CPX #SCORE_SPRITE_DB_LENGTH
+    BNE .LoadScoreSprite_Next  
     
     ; Other sprites
     JSR Load_New_Traffic_Cone
