@@ -39,10 +39,16 @@ NMI_State_TitleScreen:
     ; first we generate the background for the nametable for which we are NOT currently looking at ($20)
     LDA #0
     STA generate_x
-    STA background_load_counter
     LDA #$20                            ; The address of the first nametable
     STA current_nametable_generating    ; Store the nametable address for which we are curently generating
                                         ; We use the generate_x to step through the second part of the PPUADDR when generating the background
+    
+    ; Seed the random number generator
+    LDX title_screen_flash_timer        ; Use the current value of the title_screen_flash_timer for different seeds each session
+    STX seed
+    INX                                 ; Ensures a non zero seed
+    STA seed+1
+
     LDA #GAMESTATE_CONTROLS             ; Change the state machine
     STA gameStateMachine
     JMP NMI_ShowControlsPage
@@ -54,11 +60,9 @@ NMI_State_ControlScreen:
     ; one NMI update will overload the PPU and cause garbage to be displayed.
     ; The player is expected to spend much more than 32 frames in each state, so we take
     ; advantage of this time to do this generation gradually and safely
-    LDX background_load_counter
+    LDX generate_x ;background_load_counter
     CPX #NUMBER_OF_TILES_PER_ROW
     BEQ .CheckForControls               ; Nametable is fully loaded so check for exit controls
-    INX
-    STX background_load_counter
     JSR GenerateGameBackground_Column   ; Generate a new background column
     JMP NMI_ShowControlsPage            ; Continue to show the control screen
 ; Check for an A button press (this is indicated in the control screen to continue)
@@ -73,7 +77,6 @@ NMI_State_ControlScreen:
     STA current_nametable_generating
     LDA #0
     STA generate_x
-    STA background_load_counter
     LDA #GAMESTATE_PREGAME
     STA gameStateMachine
 
@@ -119,12 +122,11 @@ NMI_State_ControlScreen:
 ; Executable when state machine is in the PreGame state
 NMI_State_PreGame:
     ; Load in the second nametable of game background
-    LDX background_load_counter             ; Check if finished loading in nametable
+    LDX generate_x                          ; Check if finished loading in nametable
     CPX #NUMBER_OF_TILES_PER_ROW
     BNE .MoreColumnsNeeded                  ; load in another column
     JMP InitGame                            ; else initialise game for play
 .MoreColumnsNeeded:                     
-    INC background_load_counter             ; increment the counter
     JSR GenerateGameBackground_ColumnWithLedge
     JMP NMI_ShowPreGame
 ;----------------------------------------

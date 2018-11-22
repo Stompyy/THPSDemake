@@ -212,27 +212,35 @@ GenerateGameBackground_Column:
     LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
     STA PPUCTRL         ; Have to restore back to previous values later
 
+    ; Reset the PPU high/low latch
+    LDA PPUSTATUS
+
     LDA current_nametable_generating
     STA PPUADDR
     LDA generate_x
     STA PPUADDR
 
-    LDY #26             ; Use Y reg here as GetRandomTile clobbers X register
-                        ; 30 rows = 26 sky + 1 floor + 3 bricks underground
-    LDA #$00            ; Location of an empty tile in the sprite sheet
-.GenerateEmptyTile:
-    ; JSR GetRandomTile  ; This requires too much of the PPU.
-                        ; Interestingly only generates 14-15 tiles before NMI exits
-                        ; May work if just generate single tiles here instead of rows
-                        ; But may take too much time for player?
+    LDA #$00            ; Load in one row of blank to account for PAL displays
+    STA PPUDATA
+
+    LDY #8              ; Use Y reg here as GetRandomTile clobbers X register
+                        ; Any more than 10 will take up too many CPU cycles
+.GenerateRandomClouds:  ; Load four tiles of randomly generated cloud tiles
+    JSR GetRandomTile   
     STA PPUDATA
     DEY
+    BNE .GenerateRandomClouds
+
+    LDX #17             ; 30 rows = 1 blank + 8 clouds + 17 sky + 1 floor + 3 bricks underground
+    LDA #$00            ; Location of an empty tile in the sprite sheet
+.GenerateEmptyTile:
+    STA PPUDATA
+    DEX
     BNE .GenerateEmptyTile
     LDA #$F0            ; Load one tile of floor
     STA PPUDATA
     LDX #3              ; Load three tiles of underground
     LDA #$F2            ; Underground tile location
-    CLC
 .GenerateBricks:        ; Fill last 3 rows with brick tiles
     STA PPUDATA
     DEX
@@ -247,24 +255,14 @@ GenerateGameBackground_Column:
     STA PPUCTRL
     RTS
 ;----------------------------------------
-; Will use the pseudo random number generator to randomly choose an empty tile or a patterned tile based on weighting
-; Store that tile address value into the A register
-GetRandomTile:
-    JSR prng        ; Clobbers X register. Fills A register with an 8 bit random number
-    CLC
-    CMP #128        ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
-    BCS .ReturnPositiveTile
-    LDA #$00        ; Location of empty tile
-    RTS
-.ReturnPositiveTile:
-    LDA #$6F        ; Location of patterned tile
-    RTS
-;----------------------------------------
 ; Generates a column of background tiles in the appropriate memory position for the second nametable (with ledge)
 GenerateGameBackground_ColumnWithLedge:
     ; PPUCTRL flag. 
     LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
     STA PPUCTRL         ; Have to restore back to previous values later
+
+    ; Reset the PPU high/low latch
+    LDA PPUSTATUS
 
     ; Set the PPUADDR as the preset variable, and offset into by the generate_x that increments with each generation
     LDA current_nametable_generating
@@ -272,7 +270,18 @@ GenerateGameBackground_ColumnWithLedge:
     LDA generate_x
     STA PPUADDR
 
-    LDX #25             ; 30 rows = 25 empty + 1 ledge + 1 floor + 3 bricks underground
+    LDA #$00            ; Load in one row of blank to account for PAL displays
+    STA PPUDATA
+
+    LDY #8              ; Use Y reg here as GetRandomTile clobbers X register
+                        ; Any more than 10 will take up too many CPU cycles
+.GenerateRandomClouds:  ; Load four tiles of randomly generated cloud tiles
+    JSR GetRandomTile   
+    STA PPUDATA
+    DEY
+    BNE .GenerateRandomClouds
+
+    LDX #16             ; 30 rows = 1 blank + 8 clouds + 16 sky + 1 ledge + 1 floor + 3 bricks underground
     LDA #$00            ; Location of an empty tile in the sprite sheet
 .GenerateEmptyTile:
     STA PPUDATA
@@ -284,7 +293,6 @@ GenerateGameBackground_ColumnWithLedge:
     STA PPUDATA
     LDX #3              ; Load three tiles of underground
     LDA #$F2            ; Underground tile location
-    CLC
 .GenerateBricks:
     STA PPUDATA
     DEX
@@ -295,6 +303,19 @@ GenerateGameBackground_ColumnWithLedge:
     STA PPUSCROLL
     LDA #%00000000      ; Set back to normal skip mode
     STA PPUCTRL
+    RTS
+;----------------------------------------
+; Will use the pseudo random number generator to randomly choose an empty tile or a patterned tile based on weighting
+; Store that tile address value into the A register
+GetRandomTile:
+    JSR prng        ; Clobbers X register. Fills A register with an 8 bit random number
+    CLC
+    CMP #CLOUD_PROBABILITY  ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
+    BCS .ReturnPositiveTile
+    LDA #$00        ; Location of empty tile
+    RTS
+.ReturnPositiveTile:
+    LDA #$6F        ; Location of cloud tile
     RTS
 ;----------------------------------------
 ; Uses the white blanking box sprite to cover and reveal the title screen text, to seem to flash

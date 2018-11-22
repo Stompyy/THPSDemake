@@ -78,8 +78,9 @@ NUMBER_OF_TRAFFIC_CONES         = 1
 TRAFFIC_CONE_HITBOX_HEIGHT      = 8
 TRAFFIC_CONE_HITBOX_WIDTH       = 8
 
-NUMBERS                         = $F6
 MAX_SCORE_NUMBER_BEFORE_WRAP    = 9         ; Loop back to zero after this number
+
+CLOUD_PROBABILITY               = 200       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
 
 ;----------------------------------------
 ;;; Variables. All get initialised to zero
@@ -138,7 +139,7 @@ delta_X                         .rs 1   ; The product of the carry flag subpixel
 scroll_x                        .rs 1   ; The x movement 
 scroll_page                     .rs 1   ; the current nametable page
 
-seed                            .rs 2
+seed                            .rs 2   ; Seed of the pseudo random number generator
 generate_x                      .rs 1   ; The background column being generated
 
 current_nametable_generating    .rs 1   ; Keeps track of which nametable we are currently generatng a background for

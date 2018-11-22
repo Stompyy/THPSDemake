@@ -8,12 +8,6 @@ InitialiseGame:
     LDA #0
     STA OAMDMA
 
-    ; Seed the random number generator
-    LDA #$12    ; Arbitary 1234 (non zero value)
-    STA seed
-    LDA #$34
-    STA seed+1
-
     ; Reset the PPU high/low latch
     LDA PPUSTATUS
 
