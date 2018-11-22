@@ -17,7 +17,9 @@ InitialiseGame:
     ; Reset the PPU high/low latch
     LDA PPUSTATUS
 
+;----------------------------------------
 ; Palettes
+;----------------------------------------
     ; Write address 3F00 (Background palette) to the PPU
     LDA #$3F
     STA PPUADDR
@@ -46,15 +48,11 @@ InitialiseGame:
     CPX #SPRITE_PALETTES_LENGTH
     BNE .LoadPalette_SpriteLoop   
 
+;----------------------------------------
 ; Sprites
+;----------------------------------------
     ; Load in the text blanking white rect that is used to make text flash
-    LDX #0
-.LoadBlankSprite_Next:
-    LDA whiteBlankBoxSprite, X
-    STA sprite_text_blanking_box_white, X
-    INX
-    CPX #WHITE_BLANK_BOX_DB_LENGTH
-    BNE .LoadBlankSprite_Next
+    JSR LoadWhiteTextBlockingBox
 
     ; Copy sprite data to the PPU
     ; Just for the white box currently
@@ -63,7 +61,9 @@ InitialiseGame:
     LDA #$02    ; Location of the sprites In memory
     STA OAMDMA
 
+;----------------------------------------
 ; Attribute data tables
+;----------------------------------------
     ; Load attribute data that each 16 x 16 uses
     LDA #$23        ; First nametable attribute table
     STA PPUADDR
@@ -89,14 +89,23 @@ InitialiseGame:
     DEX
     BNE .LoadAttributes2_Loop
 
+;----------------------------------------
+; Bools
+;----------------------------------------
     ; The default starting state for the player
     LDA #TRUE
     STA is_grounded
     
+;----------------------------------------
+; State machine
+;----------------------------------------
     ; Initalise state machine to the title screen
     LDA #GAMESTATE_TITLE
     STA gameStateMachine
 
+;----------------------------------------
+; Backgrounds
+;----------------------------------------
     ; Load in the first two backgrounds
     JSR LoadTitleScreen 
     

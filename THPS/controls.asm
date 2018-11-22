@@ -1,10 +1,13 @@
 ;----------------------------------------
-;;;;;;;---------------------------;;;;;;;
+;;;;;;;--------Controls-----------;;;;;;;
 ;----------------------------------------
 UpdateGame:
     ; Update the joypad1_state
     JSR Check_Controls
 
+;----------------------------------------
+; Check Scroll for x axis movement
+;----------------------------------------
     ; Scroll - Do this first as heavy, to avoid potential flickering as screen is already being rendered at end
     LDA scroll_x
     CLC
@@ -23,6 +26,12 @@ UpdateGame:
 .Scroll_NoWrap:
     LDA #0
     STA PPUSCROLL           ; y scroll
+    
+    JSR Update_Obstacle_X_Positions
+
+;----------------------------------------
+; Check controls for tricks
+;----------------------------------------
 
     ; If is grinding, then skip past the standard controls
     LDA is_grinding
@@ -38,10 +47,11 @@ UpdateGame:
     LDA is_animating        ; Check if is animating
     CMP #TRUE
     BEQ ReadB_Done
-    LDA is_grounded
+    LDA is_grounded         ; 
     CMP #TRUE
     BEQ .B_pressed_grounded
-    JMP WaitingForGrind
+    JMP WaitingForGrind     ; If B is pressed in the air then don't check for other controls
+                            ; the player will be holding it down preparing to grind the ledge
 .B_pressed_grounded:
     ; Set up the NOLLIE animation
     Animation_SetUp #ANIM_OFFSET_NOLLIE, #TOTAL_ANIM_TILES_NOLLIE
@@ -51,9 +61,8 @@ UpdateGame:
     LDA #HIGH(JUMP_FORCE)
     STA player_downward_speed + 1
     ; Move off the ground to allow forces
-    Player_Move SPRITE_Y, #-2
-    ; Change bool
-    LDA #FALSE
+    Player_Move SPRITE_Y, #-2   ; 2 is enough to disengage from is_grounded check, 1 is immediately discounted by gravity
+    LDA #FALSE                  ; Set is_grounded to false
     STA is_grounded
 ReadB_Done:
 
@@ -178,21 +187,24 @@ ReadDown_Done:
     
 ReadControls_Done:
 
+;----------------------------------------
+; Check collisions
+;----------------------------------------
     ; Check collision with traffic cones
     CheckCollisionWithCone sprite_player+SPRITE_X, sprite_player+SPRITE_Y, #PLAYER_PIXEL_HEIGHT, #20, #2, #2, NoCollisionWithCone 
     ; If collided, then set fall anim
     Animation_SetUp #ANIM_OFFSET_FALL, #TOTAL_ANIM_TILES_FALL
     JSR ResetScore
 NoCollisionWithCone:
-
     LDA is_grinding
     CMP #FALSE
     BEQ WaitingForGrind
-
     JSR Grind_CheckForEndOfLedge
 
+;----------------------------------------
+; Check grinds and update gravity and speed
+;----------------------------------------
 WaitingForGrind:
-
     LDA is_grinding
     CMP #TRUE
     BEQ .SkipGravityAndSpeed
@@ -215,8 +227,6 @@ WaitingForGrind:
     STA player_downward_speed + 1
 
 .GrindChecksDone:
-
-    JSR Update_Obstacle_X_Positions
 
     LDA is_grounded
     CMP #FALSE
@@ -287,6 +297,10 @@ WaitingForGrind:
     JSR IncrementScore
     JMP .SkipGravityAndSpeed
 .PlayerNotGrindingLedge:
+
+;----------------------------------------
+; Update player sprite
+;----------------------------------------
 
     LDA is_animating                        ; Check if is animating
     CMP #FALSE

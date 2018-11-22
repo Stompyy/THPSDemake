@@ -78,37 +78,37 @@ NMI_State_ControlScreen:
     STA gameStateMachine
 
     ; Load attribute data that each 16 x 16 uses
-    LDA #$23                            ; Write address $23C0 to PPUADDR register
-    STA PPUADDR                         ; PPUADDR is big endian for some reason??
+    LDA #$23                            ; Write address $23C0 (first nametable attribute table) to PPUADDR register
+    STA PPUADDR
     LDA #$C0
     CLC
-    ADC #46                             ; Only bother changing the floor bit
+    ADC #48                             ; Offset into the attribute table by 6 * rows of 8 (Only need to change the floor section)
     STA PPUADDR
 
-    LDA #%01010101                      ; set all (attribute table?) to first colour palette
-    LDX #18
+    LDA #%01010101                      ; set all (attribute table) to the second colour palette
+    LDX #16                             ; last 2 * rows of 8
 .LoadAttributes_Loop:
     STA PPUDATA
     DEX
     BNE .LoadAttributes_Loop
 
     ; Load attribute data
-    LDA #$27
+    LDA #$27                            ; Write address $27C0 (second nametable attribute table) to PPUADDR register
     STA PPUADDR
     LDA #$C0
     CLC
-    ADC #48
+    ADC #48                             ; Offset into the attribute table by 6 * rows of 8 (again, don't need to change the sky palette)
     STA PPUADDR
 
-    LDA #%01011010                      ; For the ledge palette
-    LDX #8
+    LDA #%01011010                      ; Upper 2 blocks in attribute box set to third palette for the ledge
+    LDX #8                              ; 1 * row of 8
 .LoadAttributes2_Loop:
     STA PPUDATA
     DEX
     BNE .LoadAttributes2_Loop
 
-    LDA #%01010101
-    LDX #8
+    LDA #%01010101                      ; set all attributes to the second colour palette
+    LDX #8                              ; 1 * row of 8
 .LoadAttributes3_Loop:
     STA PPUDATA
     DEX
@@ -116,40 +116,26 @@ NMI_State_ControlScreen:
 
     JMP NMI_ShowPreGame
 ;----------------------------------------
+; Executable when state machine is in the PreGame state
 NMI_State_PreGame:
-
-    LDX background_load_counter
+    ; Load in the second nametable of game background
+    LDX background_load_counter             ; Check if finished loading in nametable
     CPX #NUMBER_OF_TILES_PER_ROW
-    BNE .MoreColumnsNeeded
-    JMP InitGame
-.MoreColumnsNeeded:
-    INX
-    STX background_load_counter
+    BNE .MoreColumnsNeeded                  ; load in another column
+    JMP InitGame                            ; else initialise game for play
+.MoreColumnsNeeded:                     
+    INC background_load_counter             ; increment the counter
     JSR GenerateGameBackground_ColumnWithLedge
     JMP NMI_ShowPreGame
 ;----------------------------------------
+; When finished loading in game background, load in game sprites and update the game state machine
 InitGame:
-    ; Load the player sprite
-    LDX #0
-.LoadPlayerSprite_Next:
-    LDA playerSprite, X
-    STA sprite_player, X
-    INX
-    CPX #PLAYER_SPRITE_DB_LENGTH
-    BNE .LoadPlayerSprite_Next  
-    
-    ; Load the score sprite
-    LDX #0
-.LoadScoreSprite_Next:
-    LDA ScoreSprite, X
-    STA sprite_score_text, X
-    INX
-    CPX #SCORE_SPRITE_DB_LENGTH
-    BNE .LoadScoreSprite_Next  
-    
-    ; Other sprites
-    JSR Load_New_Traffic_Cone
+    ; Load in game sprites
+    JSR LoadPlayer
+    JSR LoadScore
+    JSR LoadTrafficCone
 
+    ; Change the gameState to Play
     LDA #GAMESTATE_PLAY
     STA gameStateMachine
     JMP NMI_State_PlayGame
