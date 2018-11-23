@@ -49,6 +49,8 @@ NMI_State_TitleScreen:
     INX                                 ; Ensures a non zero seed
     STA seed+1
 
+    JSR Title_RemoveWhiteBox            ; Remove the white text flashing box
+
     LDA #GAMESTATE_CONTROLS             ; Change the state machine
     STA gameStateMachine
     JMP NMI_ShowControlsPage

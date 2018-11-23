@@ -358,6 +358,23 @@ Title_FlashMessage:
     STA OAMDMA
     RTS
 ;----------------------------------------
+Title_RemoveWhiteBox:
+    LDA #0                                          ; Set the X position as out of the way
+    LDX #WHITE_BLANK_BOX_DB_LENGTH + SPRITE_X       ; Start at the last tile in the white box
+.ChangeNextTile:
+    STA sprite_text_blanking_box_white, X
+    DEX
+    DEX
+    DEX
+    DEX
+    BPL .ChangeNextTile
+    ; Update the sprites (doesn't happen automatically during title screens)
+    LDA #0
+    STA OAMADDR
+    LDA #$02
+    STA OAMDMA
+    RTS
+;----------------------------------------
 ; Checks the background scroll information to see if the player sprite has reached the end of the ledge
 ; If so then disengages from the grind (only called when is_grinding == true)
 Grind_CheckForEndOfLedge:
