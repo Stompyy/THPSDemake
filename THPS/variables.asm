@@ -149,6 +149,9 @@ background_load_counter         .rs 1   ; Counters and targets for loading in th
 background_load_target          .rs 1
 background_load_current_Y       .rs 1
 
+marchingSquaresProb             .rs 1
+backgroundDataTable             .rs 32 * 3
+
 ;konami_code_running_check       .rs 1
 ;konami_current_press_checked    .rs 1
 

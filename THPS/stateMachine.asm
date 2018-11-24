@@ -65,7 +65,7 @@ NMI_State_ControlScreen:
     LDX generate_x ;background_load_counter
     CPX #NUMBER_OF_TILES_PER_ROW
     BEQ .CheckForControls               ; Nametable is fully loaded so check for exit controls
-    JSR GenerateGameBackground_Column   ; Generate a new background column
+    JSR GenerateGameBackground_Column; GenerateGameBackground_Column_FullRandom;  ; Generate a new background column
     JMP NMI_ShowControlsPage            ; Continue to show the control screen
 ; Check for an A button press (this is indicated in the control screen to continue)
 .CheckForControls:
@@ -105,7 +105,7 @@ NMI_State_ControlScreen:
     ADC #48                             ; Offset into the attribute table by 6 * rows of 8 (again, don't need to change the sky palette)
     STA PPUADDR
 
-    LDA #%01011010                      ; Upper 2 blocks in attribute box set to third palette for the ledge
+    LDA #%01011010                      ; Lower 2 blocks in attribute box set to third palette for the ledge
     LDX #8                              ; 1 * row of 8
 .LoadAttributes2_Loop:
     STA PPUDATA
@@ -129,7 +129,7 @@ NMI_State_PreGame:
     BNE .MoreColumnsNeeded                  ; load in another column
     JMP InitGame                            ; else initialise game for play
 .MoreColumnsNeeded:                     
-    JSR GenerateGameBackground_ColumnWithLedge
+    JSR GenerateGameBackground_ColumnWithLedge;GenerateGameBackground_Column_WithLedge_FullRandom;
     JMP NMI_ShowPreGame
 ;----------------------------------------
 ; When finished loading in game background, load in game sprites and update the game state machine

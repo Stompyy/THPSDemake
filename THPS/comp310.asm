@@ -6,6 +6,7 @@
     .bank 0
     .org $C000
 ;------------------------------------------
+; Files to include
     INCLUDE "animationDatabase.asm"
     INCLUDE "spriteDatabase.asm"
     INCLUDE "controlScreenBackgroundDatabase.asm"
@@ -22,21 +23,21 @@
     INCLUDE "initialisation.asm"
     INCLUDE "animation.asm"
     INCLUDE "NMI.asm"
+    INCLUDE "marchingSquares.asm"
 ;------------------------------------------
-
 ; 2270 CPU cycles per frame
 
 RESET:
-    SEI          ; disable (ignore) IRQs
-    CLD          ; disable decimal mode
+    SEI             ; disable (ignore) IRQs
+    CLD             ; disable decimal mode
     LDX #$40
-    STX $4017    ; disable APU frame IRQ
+    STX $4017       ; disable APU frame IRQ
     LDX #$FF
-    TXS          ; Set up stack
-    INX          ; now X = 0
-    STX PPUCTRL    ; disable NMI
-    STX PPUMASK    ; disable rendering
-    STX $4010    ; disable DMC IRQs
+    TXS             ; Set up stack
+    INX             ; now X = 0
+    STX PPUCTRL     ; disable NMI
+    STX PPUMASK     ; disable rendering
+    STX $4010       ; disable DMC IRQs
 
     ; Optional (omitted):
     ; Set up mapper and jmp to further init code here.
@@ -80,7 +81,7 @@ clrmem:
     ; Other things you can do between vblank waits are set up audio 
     ; or set up other mapper registers.
 
-vblankwait2:      ; Second wait for vblank, PPU is ready after this
+vblankwait2:        ; Second wait for vblank, PPU is ready after this
     BIT PPUSTATUS
     BPL vblankwait2
 

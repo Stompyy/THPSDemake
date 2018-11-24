@@ -1,3 +1,6 @@
+;----------------------------------------
+;;;;;;;----ANIMATIONS-DATABASE----;;;;;;;
+;----------------------------------------
 ; Tile addresses
 animations:
     ; Idle:
@@ -24,43 +27,43 @@ animations:
     .db $08, $09, $18, $19, $46, $47
     .db $0A, $0B, $1A, $1B, $56, $57
     .db $0A, $0B, $1A, $1B, $2A, $2B
-    ;anim_treflip:
+    ; Treflip:
     .db $04, $05, $14, $15, $38, $39
     .db $04, $05, $14, $15, $48, $49
     .db $04, $05, $14, $15, $58, $59
     .db $04, $05, $14, $15, $24, $25
-    ;anim_popshuv:
+    ; Popshuv:
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $4A, $4B
     .db $04, $05, $14, $15, $3A, $3B
     .db $04, $05, $14, $15, $24, $25
-    ;anim_Bs180:
+    ; BS180:
     .db $06, $07, $16, $17, $26, $27
     .db $08, $09, $18, $19, $28, $29
     .db $0A, $0B, $1A, $1B, $2A, $2B
-    ;anim_Fall:
+    ; Fall:
     .db $90, $91, $A0, $A1, $B0, $B1
     .db $92, $93, $A2, $A3, $B2, $B3
     .db $94, $95, $A4, $A5, $B4, $B5
     .db $96, $96, $A6, $A7, $B6, $B7
 
-    ;anim_5050:
+    ; 5050:
     .db $3C, $3D, $4C, $4D, $5C, $5D
-    ;anim_50:
+    ; 50:
     .db $62, $63, $72, $73, $82, $83
-    ;anim_Crooked:
+    ; Crooked:
     .db $64, $65, $74, $75, $84, $85
-    ;anim_Nosegrind:
+    ; Nosegrind:
     .db $66, $67, $76, $77, $86, $87
-    ;anim_Bluntslide:
+    ; Bluntslide:
     .db $68, $69, $78, $79, $88, $89
 
-    ;anim_Brake
+    ; Brake
     .db $3E, $3F, $4E, $4F, $5E, $5F
-    ;anim_land_regular
+    ; Land regular
     .db $3C, $3D, $4C, $4D, $5C, $5D
     .db $5A, $01, $10, $11, $20, $21
-    ;anim_land_fakie
+    ; Land fakie
     .db $0C, $0D, $1C, $1D, $2C, $2D
     .db $0E, $0F, $1E, $1F, $2E, $2F
     .db $30, $31, $40, $41, $50, $51
@@ -68,7 +71,7 @@ animations:
     .db $5A, $01, $10, $11, $20, $21
     
 ;------------------------------------------
-
+; Total tiles for each animation
 TOTAL_ANIM_TILES_IDLE       = 6 * 1
 TOTAL_ANIM_TILES_PUSH       = 6 * 3
 TOTAL_ANIM_TILES_OLLIE      = 6 * 2
@@ -88,7 +91,7 @@ TOTAL_ANIM_TILES_BLUNTSLIDE = 6 * 1
 TOTAL_ANIM_TILES_BRAKE      = 6 * 1
 TOTAL_ANIM_TILES_LAND_REGULAR = 6 * 2
 TOTAL_ANIM_TILES_LAND_FAKIE = 6 * 2 
-
+;------------------------------------------
 ; Offset of tile information into the animations .db
 ANIM_OFFSET_IDLE        = 0
 ANIM_OFFSET_PUSH        = ANIM_OFFSET_IDLE       + TOTAL_ANIM_TILES_IDLE
@@ -109,3 +112,4 @@ ANIM_OFFSET_BLUNTSLIDE  = ANIM_OFFSET_NOSEGRIND  + TOTAL_ANIM_TILES_NOSEGRIND
 ANIM_OFFSET_BRAKE       = ANIM_OFFSET_BLUNTSLIDE + TOTAL_ANIM_TILES_BLUNTSLIDE
 ANIM_OFFSET_LAND_REGULAR = ANIM_OFFSET_BRAKE     + TOTAL_ANIM_TILES_BRAKE
 ANIM_OFFSET_LAND_FAKIE  = ANIM_OFFSET_LAND_REGULAR + TOTAL_ANIM_TILES_LAND_REGULAR
+;------------------------------------------

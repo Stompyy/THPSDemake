@@ -288,6 +288,8 @@ WaitingForGrind:
     Animation_SetUp #ANIM_OFFSET_5050, #TOTAL_ANIM_TILES_5050
 .PlayerSetGrindHeight:              ; Set height to GRIND_HEIGHT
     Player_Set_Y_Position #GRIND_HEIGHT
+    LDA #FALSE
+    STA is_grounded
     JSR IncrementScore              ; Increment score
 
 .PlayerNotGrindingLedge:
