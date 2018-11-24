@@ -64,9 +64,10 @@ NMI_State_ControlScreen:
     ; advantage of this time to do this generation gradually and safely
     LDX generate_x ;background_load_counter
     CPX #NUMBER_OF_TILES_PER_ROW
-    BEQ .CheckForControls               ; Nametable is fully loaded so check for exit controls
-    JSR GenerateGameBackground_Column; GenerateGameBackground_Column_FullRandom;  ; Generate a new background column
-    JMP NMI_ShowControlsPage            ; Continue to show the control screen
+    BEQ .CheckForControls                           ; Nametable is fully loaded so check for exit controls
+    JSR GenerateGameBackground_Column;              ; Use this subroutine for a partial background of blended prob random tiles, high to low probability
+    ;JSR GenerateGameBackground_Column_FullRandom   ; Swap to this subroutine for a full backround of 0.5 prob random tiles
+    JMP NMI_ShowControlsPage                        ; Continue to show the control screen
 ; Check for an A button press (this is indicated in the control screen to continue)
 .CheckForControls:
     JSR Check_Controls
@@ -124,12 +125,13 @@ NMI_State_ControlScreen:
 ; Executable when state machine is in the PreGame state
 NMI_State_PreGame:
     ; Load in the second nametable of game background
-    LDX generate_x                          ; Check if finished loading in nametable
+    LDX generate_x                                              ; Check if finished loading in nametable
     CPX #NUMBER_OF_TILES_PER_ROW
-    BNE .MoreColumnsNeeded                  ; load in another column
-    JMP InitGame                            ; else initialise game for play
+    BNE .MoreColumnsNeeded                                      ; load in another column
+    JMP InitGame                                                ; else initialise game for play
 .MoreColumnsNeeded:                     
-    JSR GenerateGameBackground_ColumnWithLedge;GenerateGameBackground_Column_WithLedge_FullRandom;
+    JSR GenerateGameBackground_ColumnWithLedge                  ; Use this subroutine for a partial background of blended prob random tiles, high to low probability
+    ;JSR GenerateGameBackground_Column_WithLedge_FullRandom     ; Swap to this subroutine for a full backround of 0.5 prob random tiles
     JMP NMI_ShowPreGame
 ;----------------------------------------
 ; When finished loading in game background, load in game sprites and update the game state machine

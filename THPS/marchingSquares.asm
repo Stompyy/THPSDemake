@@ -40,7 +40,7 @@ GenerateGameBackground_Column_FullRandom:
     LDX #$6F            ; Draw cloud tile
 .tileChosen:
     STX PPUDATA
-    LSR marchingSquaresProb                ; bitshift the A register over to look at the next bit
+    LSR marchingSquaresProb         ; bitshift the A register over to look at the next bit
     DEY
     BNE .sectionLoop    
     DEC background_load_current_Y   ; Check if we have generated all 
@@ -142,9 +142,11 @@ GenerateGameBackground_Column_WithLedge_FullRandom:
 ; So, consider looking at a mid table bit, at an offset into that byte
 ; Surrounding tile count is worked out from:
 ;
-;   Byte-3      offset-1,   offset,     offset+1
-;   Byte        offset-1,               offset+1
-;   Byte+3      offset-1,   offset,     offset+1
+;       Byte-3      Byte        Byte+3
+;
+;       offset-1,   offset-1,   offset-1
+;       offset,                 offset
+;       offset+1,   offset+1,   offset+1
 ;
 ; Obviously edges need ignoring/wrapping/accounting for
 ;
@@ -154,9 +156,8 @@ GenerateGameBackground_Column_WithLedge_FullRandom:
 ;
 ;----------------------------------------
 marchingSquares:
-    ; Maybe have to keep out of skip 32 
-  ;  LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
-  ;  STA PPUCTRL         ; Have to restore back to previous values later
+    LDA #%00000100      ; Put PPU into skip 32 mode instead of 1
+    STA PPUCTRL         ; Have to restore back to previous values later
 
     ; Reset the PPU high/low latch
     LDA PPUSTATUS
@@ -165,27 +166,89 @@ marchingSquares:
     STA PPUADDR
     LDA generate_x
     STA PPUADDR
+    CMP #0                  ; If first row then fill with cloud tiles
+    BPL .continue
+    LDX #30
+    LDA #$6F
+.cloudColumn:
+    STA PPUDATA
+    DEX
+    BNE .cloudColumn
+    RTS
+.continue:
+    LDY #0                  ; the bit offset
+    LDX #1                  ; Leave the border
+.analyseNextTile:
+  ;  analyseSquare
+
+  ; IF YOU ARE READING THIS RICHARD, ALT F4, DO DISSERTATION WORK!!!
+
 ;----------------------------------------
-; Returns A register with the appropriate tile
+; Fills A register with the appropriate tile
 analyseSquare .macro
 ; parameters: 
 ; @Param \1 Byte number
 ; @Param \2 Offset into byte for bit
 
-;   O O O
-;   O X O
-;   O O O
-    LDA backgroundDataTable, \1     ; Get the approprate byte
-    LDX \2
-    CPX #0                          ; if offset is zero, break early
-    BEQ .noBitShiftNecessary
-.bitshift:
-    LSR A                           ; Shift by the offset amount to get the bit we want
-    DEX
-    BNE .bitshift
-.noBitShiftNecessary:
+;   0 1 2
+;   3   4
+;   5 6 7
+    LDA #0              ; Set the tile value to 0 for a new tile
+    STA tile_value
+
+    LookAtTile \1 -3,   \2 -1
+    LookAtTile \1 -3,   \2
+    LookAtTile \1 -3,   \2 +1
+
+    LookAtTile \1,      \2 -1
+    LookAtTile \1,      \2 +1
+
+    LookAtTile \1 +3,   \2 -1
+    LookAtTile \1 +3,   \2
+    LookAtTile \1 +3,   \2 +1
+    
+    LDY tile_value
+    CPY #MARCHING_SQUARES_THRESHOLD
+    BCS .returnCloud\@
+    LDA #$00            ; Empty tile location
+    JMP .finished\@
+.returnCloud\@:
+    LDA #$6F            ; Cloud tile location
 
     ; NO! STOP DOING THIS AND WORK ON YOUR DISSERTATION!
-
+.finished\@:
+    .endm
+;----------------------------------------
+LookAtTile .macro
+; parameters: 
+; @Param \1 Byte number
+; @Param \2 Offset into byte for bit
+    .if \2 = 0                          ; if zero then no need to bitshift
+    LDA backgroundDataTable, \1
+    JMP .noBitShiftNecessary\@
+    .endif
+    .if \2 = -1                         ; if negative then need to wrap to previous byte, least significant bit
+    LDA backgroundDataTable, \1-1
+    LDX #0
+    JMP .bitshift\@
+    .endif
+    .if \2 = 8                          ; if over 7 then need to wrap to next byte, most significant bit
+    LDA backgroundDataTable, \1+1
+    LDX #7
+    JMP .bitshift\@
+    .endif
+    LDA backgroundDataTable, \1         ; else use given values
+    LDX \2
+.bitshift\@:
+    LSR A                               ; Shift by the offset amount to get the bit we want
+    DEX
+    BNE .bitshift\@
+.noBitShiftNecessary\@:
+    CMP #0                              ; if bit == 1 then increment tile_value
+    BNE .incrementTileCount
+    JMP .finished
+.incrementTileCount:
+    INC tile_value
+.finished:
     .endm
 ;----------------------------------------

@@ -83,6 +83,8 @@ MAX_SCORE_NUMBER_BEFORE_WRAP    = 9         ; Loop back to zero after this numbe
 
 MAX_CLOUD_PROBABILITY           = 110       ; weighting out of 0-255 of choice to get an empty tile. >= #128 is 0.5 chance of each tile
 CLOUD_PROBABILITY_DROP          = 15        ; grades from 110, 95, ... 20, 5. /255 chance
+
+MARCHING_SQUARES_THRESHOLD      = 5
 ;----------------------------------------
 ;;; Variables. All get initialised to zero
     .rsset $0000                                ; Start counter at this, then .rs 1 increments
@@ -150,6 +152,7 @@ background_load_target          .rs 1
 background_load_current_Y       .rs 1
 
 marchingSquaresProb             .rs 1
+tile_value                      .rs 1
 backgroundDataTable             .rs 32 * 3
 
 ;konami_code_running_check       .rs 1
