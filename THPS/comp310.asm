@@ -99,4 +99,4 @@ Forever:
 ;----------------------------------------
     .bank 2
     .org $0000
-    .incbin "THPS.chr"
+    .incbin "SpriteSheet/THPS.chr"

@@ -281,7 +281,8 @@ marchingSquares:
 .continue2:
 
     LDY #0                  ; The byte
-    LDX #1                  ; Leave the border
+    LDA #$6F                ; Load in one row of cloud to account for the border
+    
 .analyseNextTile:
    ; analyseSquare
 
