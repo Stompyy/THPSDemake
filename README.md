@@ -30,11 +30,11 @@ In variables you can see a *PlayerState* byte where each bit is a flag, e.g. is_
 
 Konami code was an overscope...
 
-![Title screen](https://github.com/Stompyy/THPSDemake/Images/titleScreen.png "Title screen")
+![Title screen](https://github.com/Stompyy/THPSDemake/blob/master/Images/titleScreen.png "Title screen")
 
-![Controls screen](https://github.com/Stompyy/THPSDemake/Images/controlScreen.png "Controls screen")
+![Controls screen](https://github.com/Stompyy/THPSDemake/blob/master/Images/controlScreen.png "Controls screen")
 
-![In game](https://github.com/Stompyy/THPSDemake/Images/inGame.png "In game")
+![In game](https://github.com/Stompyy/THPSDemake/blob/master/Images/inGame.png "In game")
 
 ### Compiling if necessary
 
